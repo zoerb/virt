@@ -10,7 +10,8 @@
                  [compojure "1.1.6"]
                  [cljs-http "0.1.2"]
                  [cheshire "5.3.1"]
-                 [om "0.1.7"]]
+                 [secretary "0.4.0"]
+                 [om "0.3.0"]]
   :plugins [[lein-cljsbuild "1.0.1"]
             [lein-ring "0.8.8"]]
   :cljsbuild {
