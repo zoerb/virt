@@ -6,20 +6,23 @@
               [om.core :as om :include-macros true]
               [om.dom :as dom :include-macros true]
               [secretary.core :as secretary]
-              [cljs-http.client :as http])
+              [cljs-http.client :as http]
+              [clojure.browser.repl :as repl])
     (:import [goog History]
              [goog.history EventType]))
 
 
 (enable-console-print!)
+(repl/connect "http://localhost:9000/repl")
 
 (def app-state
-  (atom {:cosms [{:id 1 :text "hi"} {:id 2 :text "howdy"} {:id 3 :text "how's it goin"}]}))
+  (atom {:cosms [{:id 1 :text "hi"} {:id 2 :text "howdy"} {:id 3 :text "how's it goin"}]
+         :current-title {:text "THE jjjjjj TITLE"}}))
 
 
-(defroute "/" [] (swap! app-state assoc :showing :all))
+;(defroute "/" [] (swap! app-state assoc :current-title {:text "title"}))
 
-(defroute "/:filter" [filter] (swap! app-state assoc :showing (keyword filter)))
+;(defroute "/:cosm-id" [cosm-id] (swap! app-state assoc :showing (keyword filter)))
 
 (def history (History.))
 
@@ -29,23 +32,31 @@
 (.setEnabled history true)
 
 
-(defn list-item-component [item owner]
+(defn list-item [item owner]
   (reify
     om/IRender
     (render [_]
       (dom/li nil (:text item)))))
 
-(defn main [{:keys [cosms] :as app} owner]
+(defn header [current-title owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/header nil
+        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button"} "Back"))
+        (dom/div nil (dom/div #js {:id "header-title"} (:text current-title)))
+        (dom/div nil (dom/button #js {:id "new-button" :className "transparent-button"} "New"))))))
+
+(defn main [app owner]
   (reify
     om/IRender
     (render [_]
       (dom/div nil
-        (dom/div #js {:id "header"}
-          (dom/button #js {:id "back-button" :className "transparent-button"} "Back"))
+        (om/build header (:current-title app))
         (dom/ul #js {:id "cosms-list" :className "virt-list"}
-          (om/build-all list-item-component cosms))))))
+          (om/build-all list-item (:cosms app)))))))
 
-(defn virt-clj-app [{:keys [cosms] :as app} owner]
+(defn virt-clj-app [app owner]
   (reify
     om/IRender
     (render [_]
