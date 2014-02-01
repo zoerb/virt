@@ -12,7 +12,8 @@
                  [cljs-http "0.1.2"]
                  [cheshire "5.3.1"]
                  [secretary "0.4.0"]
-                 [om "0.3.0"]]
+                 [om "0.3.0"]
+                 [com.cemerick/piggieback "0.1.2"]]
   :plugins [[lein-cljsbuild "1.0.1"]
             [lein-ring "0.8.8"]]
   :cljsbuild {
@@ -35,4 +36,5 @@
                 :externs ["om/externs/react.js"]
                 :closure-warnings
                 {:non-standard-jsdoc :off}}}]}
-  :ring {:handler virt-clj.core/app})
+  :ring {:handler virt-clj.core/app}
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]})
