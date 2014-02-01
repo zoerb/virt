@@ -7,6 +7,7 @@
                  [org.clojure/clojurescript "0.0-2138"]
                  [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
                  [ring/ring-core "1.2.1"]
+                 [javax.servlet/servlet-api "2.5"]
                  [compojure "1.1.6"]
                  [cljs-http "0.1.2"]
                  [cheshire "5.3.1"]
@@ -19,14 +20,14 @@
               :source-paths ["src/cljs"]
               :compiler {
                 :output-to "resources/public/js/virt-clj.js"
+                :source-map "resources/public/js/virt-clj.js.map"
                 :output-dir "resources/public/js/out"
                 :optimizations :none
                 :externs ["om/externs/react.js"]}}
              {:id "release"
               :source-paths ["src/cljs"]
               :compiler {
-                :output-to "resources/public/js/virt-vlj.js"
-                :source-map "resources/public/js/virt-vlj.js.map"
+                :output-to "resources/public/js/virt-clj.js"
                 :optimizations :advanced
                 :pretty-print false
                 :output-wrapper false
