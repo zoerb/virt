@@ -48,16 +48,16 @@
   (reify
     om/IRender
     (render [_]
-      (dom/li nil (:title item)))))
+      (dom/a #js {:href (str "/" (:id item)) :className "list-link"} (dom/li nil (:title item))))))
 
 (defn header [app owner]
   (reify
     om/IRender
     (render [_]
       (dom/header nil
-        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button"} "Back"))
+        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button" :onClick #(. js/history back)} "Back"))
         (dom/div nil (dom/div #js {:id "header-title"} (if-let [current-channel (:current-channel app)]
-                                                         (:title current-channel)
+                                                         (:title (find-in-vec [:id] current-channel (:channels app)))
                                                          "Virt")))
         (dom/div nil (dom/button #js {:id "new-button" :className "transparent-button"} "New"))))))
 

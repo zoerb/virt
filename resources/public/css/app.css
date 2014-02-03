@@ -81,18 +81,11 @@ header > *:last-child {
   margin: 0;
 }
 
-.virt-list > li {
+.virt-list li {
   padding: 8px;
   border-bottom: 1px solid #d0d0d0;
 }
 
-.list-link {
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  height: 100%;
-  padding: 15px 5px;
-}
 .list-link:hover, .list-link:visited, .list-link:link, .list-link:active {
   text-decoration: none;
 }
