@@ -8,7 +8,7 @@
             [secretary.core :as secretary]
             [cljs-http.client :as http]
             [clojure.browser.repl :as repl]
-            [virt-clj.utils :refer [find-in-vec]])
+            [virt-clj.utils :refer [find-in-vec find-all-in-vec]])
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))
@@ -18,27 +18,27 @@
 (repl/connect "http://localhost:9000/repl")
 
 (def app-state
-  (atom {:cosms [{:id 1 :title "hi"}
-                 {:id 2 :title "howdy" :owner {:name "ms"}}
-                 {:id 3 :title "how's it goin" :owner {:name "mr"}}]
-         :page-title ""}))
+  (atom {:channels [{:id 0x001 :title "hi" :children [0xAA0 0xAA1 0xAA2]}
+                    {:id 0xAA0 :title "hi1" :parent 0x001}
+                    {:id 0xAA1 :title "hi2" :parent 0x001}
+                    {:id 0xAA2 :title "hi3" :parent 0x001}
+                    {:id 0x002 :title "howdy"}
+                    {:id 0x003 :title "how's it goin"}]
+         :top-level-channels [0x001 0x002 0x003]
+         :current-channel nil}))
 
 
 (defroute "/" []
-  (swap! app-state assoc :page-title "Virt"))
+  (swap! app-state assoc :current-channel nil))
 
-(defroute ":cosm-id" [cosm-id]
-  (swap! app-state
-         assoc :page-title (:title (find-in-vec [:id]
-                                                (cljs.reader/read-string cosm-id)
-                                                (:cosms @app-state)))))
+(defroute ":channel-id" [channel-id]
+  (println channel-id)
+  (swap! app-state assoc :current-channel (cljs.reader/read-string channel-id)))
 
 (def history (Html5History.))
 
 (events/listen history EventType.NAVIGATE
-  (fn [e]
-    (.log js/console (.-token e))
-    (secretary/dispatch! (.-token e))))
+  (fn [e] (secretary/dispatch! (.-token e))))
 
 (.setUseFragment history false)
 (.setEnabled history true)
@@ -56,7 +56,9 @@
     (render [_]
       (dom/header nil
         (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button"} "Back"))
-        (dom/div nil (dom/div #js {:id "header-title"} (:page-title app)))
+        (dom/div nil (dom/div #js {:id "header-title"} (if-let [current-channel (:current-channel app)]
+                                                         (:title current-channel)
+                                                         "Virt")))
         (dom/div nil (dom/button #js {:id "new-button" :className "transparent-button"} "New"))))))
 
 (defn main [app owner]
@@ -65,8 +67,11 @@
     (render [_]
       (dom/div nil
         (om/build header app)
-        (dom/ul #js {:id "cosms-list" :className "virt-list"}
-          (om/build-all list-item (:cosms app)))))))
+        (let [list-items (if-let [current-channel (:current-channel app)]
+                           (:children (find-in-vec [:id] current-channel (:channels app)))
+                           (:top-level-channels app))]
+          (dom/ul #js {:className "virt-list"}
+            (om/build-all list-item (find-all-in-vec [:id] list-items (:channels app)))))))))
 
 (defn virt-clj-app [app owner]
   (reify
