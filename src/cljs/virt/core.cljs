@@ -55,7 +55,7 @@
     om/IRender
     (render [_]
       (dom/header nil
-        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button" :onClick #(. js/history back)} "Back"))
+        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button" :onClick #(.back js/history)} "Back"))
         (dom/div nil (dom/div #js {:id "header-title"} (if-let [current-channel (:current-channel app)]
                                                          (:title (find-in-vec [:id] current-channel (:channels app)))
                                                          "Virt")))
@@ -70,7 +70,7 @@
         (let [list-items (if-let [current-channel (:current-channel app)]
                            (:children (find-in-vec [:id] current-channel (:channels app)))
                            (:top-level-channels app))]
-          (dom/ul #js {:className "virt-list"}
+          (apply dom/ul #js {:className "virt-list"}
             (om/build-all list-item (find-all-in-vec [:id] list-items (:channels app)))))))))
 
 (defn virt-app [app owner]
