@@ -1,4 +1,4 @@
-(ns virt-clj.core
+(ns virt.core
   (:require-macros [cljs.core.async.macros :refer [go alt!]]
                    [secretary.macros :refer [defroute]])
   (:require [goog.events :as events]
@@ -8,7 +8,7 @@
             [secretary.core :as secretary]
             [cljs-http.client :as http]
             [clojure.browser.repl :as repl]
-            [virt-clj.utils :refer [find-in-vec find-all-in-vec]])
+            [virt.utils :refer [find-in-vec find-all-in-vec]])
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))
@@ -73,10 +73,10 @@
           (dom/ul #js {:className "virt-list"}
             (om/build-all list-item (find-all-in-vec [:id] list-items (:channels app)))))))))
 
-(defn virt-clj-app [app owner]
+(defn virt-app [app owner]
   (reify
     om/IRender
     (render [_]
       (om/build main app))))
 
-(om/root app-state virt-clj-app (.getElementById js/document "content"))
+(om/root app-state virt-app (.getElementById js/document "content"))

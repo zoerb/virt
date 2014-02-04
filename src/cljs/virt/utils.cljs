@@ -1,4 +1,4 @@
-(ns virt-clj.utils)
+(ns virt.utils)
 
 (defn find-in-vec [cursor value coll]
   (first (filter #(= (get-in % cursor)

@@ -1,3 +1,3 @@
-# Introduction to virt-clj
+# Introduction to virt
 
 TODO: write [great documentation](http://jacobian.org/writing/great-documentation/what-to-write/)

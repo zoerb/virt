@@ -1,6 +1,6 @@
-(ns virt-clj.core-test
+(ns virt.core-test
   (:require [clojure.test :refer :all]
-            [virt-clj.core :refer :all]))
+            [virt.core :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."
