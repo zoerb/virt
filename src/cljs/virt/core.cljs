@@ -32,7 +32,6 @@
   (swap! app-state assoc :current-channel nil))
 
 (defroute ":channel-id" [channel-id]
-  (println channel-id)
   (swap! app-state assoc :current-channel (cljs.reader/read-string channel-id)))
 
 (def history (Html5History.))
@@ -48,7 +47,13 @@
   (reify
     om/IRender
     (render [_]
-      (dom/a #js {:href (str "/" (:id item)) :className "list-link"} (dom/li nil (:title item))))))
+      (let [href (str (:id item))]
+        (dom/a #js {:href href
+                    :onClick (fn [e]
+                               (.setToken history href)
+                               (.preventDefault e))
+                    :className "list-link"}
+               (dom/li nil (:title item)))))))
 
 (defn header [app owner]
   (reify
