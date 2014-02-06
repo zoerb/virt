@@ -78,10 +78,4 @@
           (apply dom/ul #js {:className "virt-list"}
             (om/build-all list-item (find-all-in-vec [:id] list-items (:channels app)))))))))
 
-(defn virt-app [app owner]
-  (reify
-    om/IRender
-    (render [_]
-      (om/build main app))))
-
-(om/root app-state virt-app (.getElementById js/document "content"))
+(om/root app-state main (.getElementById js/document "content"))
