@@ -24,8 +24,8 @@
                     {:id 0xAA2 :title "hi3" :parent 0x001}
                     {:id 0x002 :title "howdy"}
                     {:id 0x003 :title "how's it goin"}]
-         :top-level-channels [0x001 0x002 0x003]
-         :current-channel nil}))
+         :current-channel nil
+         :page :cosm-list}))
 
 
 (defroute "/" []
@@ -45,20 +45,19 @@
 
 (defn list-item [item owner]
   (reify
-    om/IRender
-    (render [_]
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
       (let [href (str (:id item))]
         (dom/a #js {:href href
-                    :onClick (fn [e]
-                               (.setToken history href)
-                               (.preventDefault e))
+                    :onClick (fn [e] (.preventDefault e) 
+                                     (put! comm [:navigate href]))
                     :className "list-link"}
                (dom/li nil (:title item)))))))
 
 (defn header [app owner]
   (reify
-    om/IRender
-    (render [_]
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
       (dom/header nil
         (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button" :onClick #(.back js/history)} "Back"))
         (dom/div nil (dom/div #js {:id "header-title"} (if-let [current-channel (:current-channel app)]
@@ -66,16 +65,27 @@
                                                          "Virt")))
         (dom/div nil (dom/button #js {:id "new-button" :className "transparent-button"} "New"))))))
 
+(defn handle-event [msg value]
+  (case msg
+    :navigate (.setToken history value)
+    nil))
+
 (defn main [app owner]
   (reify
-    om/IRender
-    (render [_]
+    om/IWillMount
+    (will-mount [_]
+      (let [comm (chan)]
+        (om/set-state! owner :comm comm)
+        (go (while true
+              (let [[msg value] (<! comm)]
+                (handle-event msg value))))))
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
       (dom/div nil
-        (om/build header app)
-        (let [list-items (if-let [current-channel (:current-channel app)]
-                           (:children (find-in-vec [:id] current-channel (:channels app)))
-                           (:top-level-channels app))]
-          (apply dom/ul #js {:className "virt-list"}
-            (om/build-all list-item (find-all-in-vec [:id] list-items (:channels app)))))))))
+        (om/build header app {:init-state {:comm comm}})
+        (apply dom/ul #js {:className "virt-list"}
+          (om/build-all list-item
+                        (filter #(not (contains? % :parent)) (:channels app))
+                        {:init-state {:comm comm}}))))))
 
 (om/root app-state main (.getElementById js/document "content"))
