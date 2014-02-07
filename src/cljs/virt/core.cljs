@@ -34,13 +34,16 @@
 (defroute ":channel-id" [channel-id]
   (swap! app-state assoc :current-channel (cljs.reader/read-string channel-id)))
 
-(def history (Html5History.))
-
-(events/listen history EventType.NAVIGATE
-  (fn [e] (secretary/dispatch! (.-token e))))
-
-(.setUseFragment history false)
-(.setEnabled history true)
+(def navigate
+  (let [history (Html5History.)]
+    (.setUseFragment history false)
+    (.setEnabled history true)
+    (events/listen history EventType.NAVIGATE
+      (fn [e] (secretary/dispatch! (.-token e))))
+    (fn [to]
+      (case to
+        :up (.setToken history "")
+        (.setToken history to)))))
 
 
 (defn list-item [item owner]
@@ -59,7 +62,7 @@
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/header nil
-        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button" :onClick #(.back js/history)} "Back"))
+        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button" :onClick #(put! comm [:navigate :up])} "Back"))
         (dom/div nil (dom/div #js {:id "header-title"} (if-let [current-channel (:current-channel app)]
                                                          (:title (find-in-vec [:id] current-channel (:channels app)))
                                                          "Virt")))
@@ -67,7 +70,7 @@
 
 (defn handle-event [msg value]
   (case msg
-    :navigate (.setToken history value)
+    :navigate (navigate value)
     nil))
 
 (defn main [app owner]
