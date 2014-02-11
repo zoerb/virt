@@ -18,21 +18,19 @@
 (repl/connect "http://localhost:9000/repl")
 
 (def app-state
-  (atom {:channels [{:id 0x001 :title "hi" :children [0xAA0 0xAA1 0xAA2]}
+  (atom {:channels [{:id 0x001 :title "hi"}
                     {:id 0xAA0 :title "hi1" :parent 0x001}
                     {:id 0xAA1 :title "hi2" :parent 0x001}
                     {:id 0xAA2 :title "hi3" :parent 0x001}
                     {:id 0x002 :title "howdy"}
-                    {:id 0x003 :title "how's it goin"}]
-         :current-channel nil
-         :page :cosm-list}))
+                    {:id 0x003 :title "how's it goin"}]}))
 
 
-(defroute "/" []
-  (swap! app-state assoc :current-channel nil))
-
-(defroute ":channel-id" [channel-id]
-  (swap! app-state assoc :current-channel (cljs.reader/read-string channel-id)))
+(defn set-routes [owner]
+  (defroute "/" []
+    (om/set-state! owner :page :top))
+  (defroute ":channel-id" [channel-id]
+    (om/set-state! owner :page (cljs.reader/read-string channel-id))))
 
 (def navigate
   (let [history (Html5History.)]
@@ -60,13 +58,19 @@
 (defn header [app owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [comm]}]
+    (render-state [_ {:keys [comm page]}]
       (dom/header nil
-        (dom/div nil (dom/button #js {:id "back-button" :className "transparent-button" :onClick #(put! comm [:navigate :up])} "Back"))
-        (dom/div nil (dom/div #js {:id "header-title"} (if-let [current-channel (:current-channel app)]
-                                                         (:title (find-in-vec [:id] current-channel (:channels app)))
-                                                         "Virt")))
-        (dom/div nil (dom/button #js {:id "new-button" :className "transparent-button"} "New"))))))
+        (dom/div nil (dom/button #js {:id "back-button"
+                                      :className "transparent-button"
+                                      :onClick #(put! comm [:navigate :up])}
+                                 "Back"))
+        (dom/div nil (dom/div #js {:id "header-title"}
+                              (if (= page :top)
+                                "Virt"
+                                (:title (find-in-vec [:id] page (:channels app))))))
+        (dom/div nil (dom/button #js {:id "new-button"
+                                      :className "transparent-button"}
+                                 "New"))))))
 
 (defn handle-event [msg value]
   (case msg
@@ -75,20 +79,26 @@
 
 (defn main [app owner]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:page :top})
     om/IWillMount
     (will-mount [_]
       (let [comm (chan)]
         (om/set-state! owner :comm comm)
         (go (while true
               (let [[msg value] (<! comm)]
-                (handle-event msg value))))))
+                (handle-event msg value)))))
+      (set-routes owner))
     om/IRenderState
-    (render-state [_ {:keys [comm]}]
+    (render-state [_ {:keys [comm page]}]
       (dom/div nil
-        (om/build header app {:init-state {:comm comm}})
+        (om/build header app {:init-state {:comm comm :page page}})
         (apply dom/ul #js {:className "virt-list"}
           (om/build-all list-item
-                        (filter #(not (contains? % :parent)) (:channels app))
-                        {:init-state {:comm comm}}))))))
+            (if (= page :top)
+              (filter #(not (contains? % :parent)) (:channels app))
+              (filter #(= (:parent %) page) (:channels app)))
+            {:init-state {:comm comm}}))))))
 
 (om/root app-state main (.getElementById js/document "content"))
