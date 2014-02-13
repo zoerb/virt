@@ -23,6 +23,7 @@ header > * {
 header > *:first-child {
   text-align: left;
   margin-right: 10px;
+  width: 57px;
 }
 
 header > *:nth-child(2) {
@@ -34,6 +35,7 @@ header > *:nth-child(2) {
 header > *:last-child {
   text-align: right;
   margin-left: 10px;
+  width: 57px;
 }
 
 #header-title {

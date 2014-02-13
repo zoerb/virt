@@ -60,17 +60,21 @@
     om/IRenderState
     (render-state [_ {:keys [comm page]}]
       (dom/header nil
-        (dom/div nil (dom/button #js {:id "back-button"
-                                      :className "transparent-button"
-                                      :onClick #(put! comm [:navigate :up])}
-                                 "Back"))
-        (dom/div nil (dom/div #js {:id "header-title"}
-                              (if (= page :top)
-                                "Virt"
-                                (:title (find-in-vec [:id] page (:channels app))))))
-        (dom/div nil (dom/button #js {:id "new-button"
-                                      :className "transparent-button"}
-                                 "New"))))))
+        (dom/div nil
+          (if (not= page :top)
+            (dom/button #js {:id "back-button"
+                             :className "transparent-button"
+                             :onClick #(put! comm [:navigate :up])}
+                        "Back")))
+        (dom/div nil
+          (dom/div #js {:id "header-title"}
+                   (if (= page :top)
+                     "Virt"
+                     (:title (find-in-vec [:id] page (:channels app))))))
+        (dom/div nil
+          (dom/button #js {:id "new-button"
+                           :className "transparent-button"}
+                      "New"))))))
 
 (defn handle-event [msg value]
   (case msg
@@ -93,7 +97,7 @@
     om/IRenderState
     (render-state [_ {:keys [comm page]}]
       (dom/div nil
-        (om/build header app {:init-state {:comm comm :page page}})
+        (om/build header app {:init-state {:comm comm} :state {:page page}})
         (apply dom/ul #js {:className "virt-list"}
           (om/build-all list-item
             (if (= page :top)
