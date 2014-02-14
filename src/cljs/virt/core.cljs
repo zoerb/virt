@@ -2,13 +2,14 @@
   (:require-macros [cljs.core.async.macros :refer [go alt!]]
                    [secretary.macros :refer [defroute]])
   (:require [goog.events :as events]
-            [cljs.core.async :refer [put! <! >! chan timeout]]
+            [cljs.core.async :refer [put! <! >! chan timeout alts!]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary]
             [cljs-http.client :as http]
             [clojure.browser.repl :as repl]
-            [virt.utils :refer []])
+            [virt.utils :refer []]
+            [virt.chat :refer []])
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))
@@ -18,20 +19,16 @@
 (repl/connect "http://localhost:9000/repl")
 
 (def app-state
-  (atom {:channels {0x001 {:title "hi" :children #{0xAA0 0xAA1 0xAA2}}
-                    0xAA0 {:title "hi1"}
-                    0xAA1 {:title "hi2"}
-                    0xAA2 {:title "hi3"}
-                    0x002 {:title "howdy"}
-                    0x003 {:title "how's it goin"}}
-         :top-level-channels #{0x001 0x002 0x003}}))
+  (atom {:cosms {0x001 {:title "cosm1" :app 'virt.chat }
+                 0x002 {:title "cosm2"}
+                 0x003 {:title "cosm3"}}}))
 
 
 (defn set-routes [owner]
   (defroute "/" []
-    (om/set-state! owner :page :top))
-  (defroute ":channel-id" [channel-id]
-    (om/set-state! owner :page (cljs.reader/read-string channel-id))))
+    (om/set-state! owner :page :home))
+  (defroute ":cosm-id" [cosm-id]
+    (om/set-state! owner :page (cljs.reader/read-string cosm-id))))
 
 (def navigate
   (let [history (Html5History.)]
@@ -41,7 +38,7 @@
       (fn [e] (secretary/dispatch! (.-token e))))
     (fn [to]
       (case to
-        :up (.setToken history "")
+        :home (.setToken history "")
         (.setToken history to)))))
 
 
@@ -54,7 +51,7 @@
             href (str id)]
         (dom/a #js {:href href
                     :onClick (fn [e] (.preventDefault e) 
-                                     (put! comm [:navigate href]))
+                                     (put! comm [:join-cosm id]))
                     :className "list-link"}
                (dom/li nil (:title item)))))))
 
@@ -64,49 +61,48 @@
     (render-state [_ {:keys [comm page]}]
       (dom/header nil
         (dom/div nil
-          (if (not= page :top)
-            (dom/button #js {:id "back-button"
+          (if (not= page :home)
+            (dom/button #js {:id "home-button"
                              :className "transparent-button"
-                             :onClick #(put! comm [:navigate :up])}
-                        "Back")))
+                             :onClick #(put! comm [:navigate :home])}
+                        "Home")))
         (dom/div nil
           (dom/div #js {:id "header-title"}
-                   (if (= page :top)
+                   (if (= page :home)
                      "Virt"
-                     (:title (get (:channels app) page)))))
+                     (:title (get (:cosms app) page)))))
         (dom/div nil
           (dom/button #js {:id "new-button"
                            :className "transparent-button"}
                       "New"))))))
 
-(defn handle-event [msg value]
-  (case msg
-    :navigate (navigate value)
-    nil))
-
 (defn main [app owner]
   (reify
     om/IInitState
     (init-state [_]
-      {:page :top})
+      {:page :home})
     om/IWillMount
     (will-mount [_]
-      (let [comm (chan)]
+      (let [comm (chan)
+            api-comm (chan)]
         (om/set-state! owner :comm comm)
+        (om/set-state! owner :api-comm api-comm)
         (go (while true
-              (let [[msg value] (<! comm)]
-                (handle-event msg value)))))
+              (let [[[msg value] port] (alts! [comm api-comm])]
+                (case msg
+                  :navigate (om/set-state! owner :page value)
+                  :join-cosm (virt.chat/instantiate (.getElementById js/document "content") api-comm)
+                  :set-header-text (println "set-header-text" value)
+                  nil)))))
       (set-routes owner))
     om/IRenderState
     (render-state [_ {:keys [comm page]}]
       (dom/div nil
         (om/build header app {:init-state {:comm comm} :state {:page page}})
-        (apply dom/ul #js {:className "virt-list"}
-          (om/build-all list-item
-            (let [cur-channels (if (= page :top)
-                                 (:top-level-channels app)
-                                 (:children (get (:channels app) page)))]
-              (select-keys (:channels app) cur-channels))
-            {:init-state {:comm comm}}))))))
+        (dom/div #js {:id "cosm-content"}
+          (if (= page :home)
+            (apply dom/ul #js {:className "virt-list"}
+              (om/build-all list-item (:cosms app) {:init-state {:comm comm}}))
+            (virt.chat/render)))))))
 
 (om/root app-state main (.getElementById js/document "content"))
