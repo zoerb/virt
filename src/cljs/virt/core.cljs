@@ -3,10 +3,10 @@
   (:require [cljs.core.async :refer [put! <! >! chan timeout alts!]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [cljs-http.client :as http]
             [virt.utils :refer []]
             [virt.dev]
-            [virt.cosm-list]))
+            [virt.cosm-list]
+            [virt.chat]))
 
 
 (def app-state (atom {}))

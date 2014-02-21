@@ -3,7 +3,6 @@
   (:require [cljs.core.async :refer [put! <! >! chan timeout]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [cljs-http.client :as http]
             [virt.utils :refer []]))
 
 
@@ -22,40 +21,37 @@
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (let [id (first id-item)
-            item (second id-item)
-            href (str id)]
-        (dom/a #js {:href href
-                    :onClick (fn [e] (.preventDefault e)
+            item (second id-item)]
+        (dom/a #js {:onClick (fn [e] (.preventDefault e)
                                      (put! comm [:navigate id]))
                     :className "list-link"}
                (dom/li nil (:title item)))))))
 
-(defn main [api-comm]
-  (fn [app owner]
-    (reify
-      om/IInitState
-      (init-state [_]
-        {:page :main})
-      om/IWillMount
-      (will-mount [_]
-        (let [comm (chan)]
-          (om/set-state! owner :comm comm)
-          (go (while true
-                (let [[msg value] (<! comm)]
-                  (case msg
-                    :navigate (om/set-state! owner :page value)
-                    :set-header-text (go (>! api-comm [msg value]))
-                    nil))))))
-      om/IRenderState
-      (render-state [_ {:keys [comm page]}]
-        (dom/div nil
-          (apply dom/ul #js {:className "virt-list"}
-            (om/build-all list-item
-              (let [cur-channels (if (= page :main)
-                                   (:top-level-channels app)
-                                   (:children (get (:channels app) page)))]
-                (select-keys (:channels app) cur-channels))
-              {:init-state {:comm comm}})))))))
+(defn main [app owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:page :main})
+    om/IWillMount
+    (will-mount [_]
+      (let [comm (chan)]
+        (om/set-state! owner :comm comm)
+        (go (while true
+              (let [[msg value] (<! comm)]
+                (case msg
+                  :navigate (om/set-state! owner :page value)
+                  :set-header-text (go (>! (om/get-shared owner :api-comm) [msg value]))
+                  nil))))))
+    om/IRenderState
+    (render-state [_ {:keys [comm page]}]
+      (dom/div nil
+        (apply dom/ul #js {:className "virt-list"}
+          (om/build-all list-item
+            (let [cur-channels (if (= page :main)
+                                 (:top-level-channels app)
+                                 (:children (get (:channels app) page)))]
+              (select-keys (:channels app) cur-channels))
+            {:init-state {:comm comm}}))))))
 
-(defn instantiate [elem api-comm]
-  (om/root app-state (main api-comm) elem))
+(defn attach [target comm]
+  (om/root main app-state {:target target :shared {:api-comm comm}}))
