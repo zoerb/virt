@@ -44,4 +44,4 @@
           (om/build-all list-item (:cosms app) {:init-state {:comm comm}}))))))
 
 (defn attach [target comm]
-  (om/root app-state {:api-comm comm} main target))
+  (om/root main app-state {:target target :shared {:api-comm comm}}))

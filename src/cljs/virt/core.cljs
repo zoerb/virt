@@ -54,4 +54,4 @@
       (om/build header app {:init-state {:comm comm} :state {:page page}}))))
 
 
-(om/root app-state main (.getElementById js/document "header"))
+(om/root main app-state {:target (.getElementById js/document "header")})

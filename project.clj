@@ -12,7 +12,7 @@
                  [cljs-http "0.1.2"]
                  [cheshire "5.3.1"]
                  [secretary "0.4.0"]
-                 [om "0.3.6"]
+                 [om "0.5.0"]
                  [com.cemerick/piggieback "0.1.2"]]
   :plugins [[lein-cljsbuild "1.0.2"]
             [lein-ring "0.8.10"]]
