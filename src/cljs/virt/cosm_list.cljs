@@ -7,19 +7,23 @@
 
 
 (def app-state
-  (atom {:cosms {0x001 {:title "cosm1" :app 'virt.chat }
-                 0x002 {:title "cosm2"}
-                 0x003 {:title "cosm3"}}}))
+  (atom {:cosms {0x001 {:title "cosm1" :app :chat}
+                 0x002 {:title "cosm2" :app :chat}
+                 0x003 {:title "cosm3" :app :chat}}}))
 
 
 (defn list-item [id-item owner]
   (reify
-    om/IRenderState
-    (render-state [_ {:keys [comm]}]
+    om/IRender
+    (render [_]
       (let [id (first id-item)
-            item (second id-item)]
+            item (second id-item)
+            api-comm (om/get-shared owner :api-comm)
+            app (:app item)
+            title (:title item)]
         (dom/a #js {:onClick (fn [e] (.preventDefault e) 
-                                     (put! (om/get-shared owner :api-comm) [:join-cosm id]))
+                                     (put! api-comm [:set-app app])
+                                     (put! api-comm [:set-header-text title]))
                     :className "list-link"}
                (dom/li nil (:title item)))))))
 
@@ -43,4 +47,5 @@
           (om/build-all list-item (:cosms app) {:init-state {:comm comm}}))))))
 
 (defn attach [target comm]
-  (om/root main app-state {:target target :shared {:api-comm comm}}))
+  (om/root main app-state {:target target :shared {:api-comm comm}})
+  (go (>! comm [:set-header-text "Virt"])))
