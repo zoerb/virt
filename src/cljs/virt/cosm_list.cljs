@@ -33,7 +33,7 @@
               (let [[msg value] (<! comm)]
                 (case msg
                   ;:navigate (om/set-state! owner :page value)
-                  ;:join-cosm (virt.chat/instantiate (.getElementById js/document "content") api-comm)
+                  ;:join-cosm (virt.chat/attach (.getElementById js/document "content") api-comm)
                   ;:set-header-text (println "set-header-text" value)
                   nil))))))
     om/IRenderState
