@@ -10,6 +10,7 @@
                  [javax.servlet/servlet-api "2.5"]
                  [compojure "1.1.6"]
                  [cljs-http "0.1.2"]
+                 [aleph "0.3.2"]
                  [cheshire "5.3.1"]
                  [secretary "1.0.0"]
                  [om "0.5.0"]
@@ -37,4 +38,5 @@
                 :closure-warnings
                 {:non-standard-jsdoc :off}}}]}
   :ring {:handler virt.core/app}
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]})
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :main virt.core)

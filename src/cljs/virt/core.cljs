@@ -2,14 +2,13 @@
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [goog.events :as events]
             [cljs.core.async :refer [put! <! >! chan timeout]]
-            [cljs.reader]
+            cljs.reader
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
-            [virt.utils :refer []]
-            [virt.dev]
-            [virt.cosm-list]
-            [virt.chat])
+            virt.dev
+            virt.cosm-list
+            virt.chat)
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))

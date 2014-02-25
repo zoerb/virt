@@ -34,14 +34,17 @@
       {:page :main})
     om/IWillMount
     (will-mount [_]
-      (let [comm (chan)]
+      (let [comm (chan)
+            wsUri (str "ws://" window.location.host "/api/watch/a")
+            ws (js/WebSocket. wsUri)]
         (om/set-state! owner :comm comm)
         (go (while true
               (let [[msg value] (<! comm)]
                 (case msg
                   :navigate (om/set-state! owner :page value)
                   :set-header-text (go (>! (om/get-shared owner :api-comm) [msg value]))
-                  nil))))))
+                  nil))))
+        (set! (.-onmessage ws) #(.log js/console %))))
     om/IRenderState
     (render-state [_ {:keys [comm page]}]
       (dom/div nil
