@@ -7,31 +7,53 @@
 
 
 (def app-state
-  (atom {:channels {0x001 {:title "hi" :children #{0xAA0 0xAA1 0xAA2}}
-                    0xAA0 {:title "hi1"}
-                    0xAA1 {:title "hi2"}
-                    0xAA2 {:title "hi3"}
-                    0x002 {:title "howdy"}
-                    0x003 {:title "how's it goin"}}
-         :top-level-channels #{0x001 0x002 0x003}}))
+  (atom {:channels {0x001 {:title "hi" :node-type :branch :children #{0xAA0 0xAA1 0xAA2}}
+                    0xAA0 {:title "hi1" :node-type :leaf :messages ["o hullo there" "howdy"]}
+                    0xAA1 {:title "hi2" :node-type :leaf}
+                    0xAA2 {:title "hi3" :node-type :leaf}
+                    0x002 {:title "howdy" :node-type :branch}
+                    0x003 {:title "how's it goin" :node-type :branch}}
+         :root-channel {:title "Chat" :node-type :branch :children #{0x001 0x002 0x003}}}))
 
 
-(defn list-item [id-item owner]
+(defn leaf-channel [channel owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (let [id (first id-item)
-            item (second id-item)]
-        (dom/a #js {:onClick (fn [e] (.preventDefault e)
-                                     (put! comm [:navigate id]))
-                    :className "list-link"}
-               (dom/li nil (:title item)))))))
+      (dom/div nil
+        (apply dom/ul #js {:className "virt-list"}
+          (om/build-all
+            (fn [message owner]
+              (reify
+                om/IRender
+                (render [_] (dom/li nil message))))
+            (:messages channel)))
+        (dom/input nil)))))
+
+(defn branch-channel [app owner {:keys [channel]}]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
+      (apply dom/ul #js {:className "virt-list"}
+        (om/build-all
+          (fn [id-item owner]
+            (reify
+              om/IRender
+              (render [_]
+                (let [id (first id-item)
+                      item (second id-item)]
+                  (dom/a #js {:onClick (fn [e] (.preventDefault e)
+                                               (put! comm [:navigate id]))
+                              :className "list-link"}
+                         (dom/li nil (:title item)))))))
+          (select-keys (:channels app) (:children channel)))))))
+
 
 (defn main [app owner]
   (reify
     om/IInitState
     (init-state [_]
-      {:page :main})
+      {:page-stack []})
     om/IWillMount
     (will-mount [_]
       (let [comm (chan)
@@ -41,20 +63,22 @@
         (go (while true
               (let [[msg value] (<! comm)]
                 (case msg
-                  :navigate (om/set-state! owner :page value)
+                  :navigate (om/set-state! owner :page-stack (conj (om/get-state owner :page-stack) value))
                   :set-header-text (go (>! (om/get-shared owner :api-comm) [msg value]))
                   nil))))
-        (set! (.-onmessage ws) #(.log js/console %))))
+        (set! (.-onmessage ws)
+          (fn [e]
+            (om/transact! app :channels #(assoc % 0x004 {:title (.-data e)}))))))
     om/IRenderState
-    (render-state [_ {:keys [comm page]}]
+    (render-state [_ {:keys [comm page-stack]}]
       (dom/div nil
-        (apply dom/ul #js {:className "virt-list"}
-          (om/build-all list-item
-            (let [cur-channels (if (= page :main)
-                                 (:top-level-channels app)
-                                 (:children (get (:channels app) page)))]
-              (select-keys (:channels app) cur-channels))
-            {:init-state {:comm comm}}))))))
+        (let [cur-channel (if (empty? page-stack)
+                            (:root-channel app)
+                            (get (:channels app) (last page-stack)))
+              m {:init-state {:comm comm}}]
+          (case (:node-type cur-channel)
+            :branch (om/build branch-channel app (assoc m :opts {:channel cur-channel}))
+            :leaf (om/build leaf-channel cur-channel m)))))))
 
 (defn attach [target comm]
   (om/root main app-state {:target target :shared {:api-comm comm}}))
