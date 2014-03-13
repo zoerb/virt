@@ -42,10 +42,8 @@
               (render [_]
                 (let [id (first id-item)
                       item (second id-item)]
-                  (dom/a #js {:onClick (fn [e] (.preventDefault e)
-                                               (put! comm [:navigate id]))
-                              :className "list-link"}
-                         (dom/li nil (:title item)))))))
+                  (dom/li #js {:onClick (fn [e] (put! comm [:navigate id]))}
+                           (:title item))))))
           (select-keys (:channels app) (:children channel)))))))
 
 

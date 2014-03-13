@@ -21,11 +21,9 @@
             api-comm (om/get-shared owner :api-comm)
             app (:app item)
             title (:title item)]
-        (dom/a #js {:onClick (fn [e] (.preventDefault e) 
-                                     (put! api-comm [:set-app app])
-                                     (put! api-comm [:set-header-text title]))
-                    :className "list-link"}
-               (dom/li nil (:title item)))))))
+        (dom/li #js {:onClick (fn [e] (put! api-comm [:set-app app])
+                                      (put! api-comm [:set-header-text title]))}
+                 (:title item))))))
 
 (defn main [app owner]
   (reify
