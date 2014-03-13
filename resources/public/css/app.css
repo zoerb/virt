@@ -13,7 +13,8 @@ header {
   -webkit-justify-content: space-between;
   align-items: center;
   -webkit-align-items: center;
-  background-color: #eeeeee;
+  background: linear-gradient(0, #f4f4f4, #e8e8e8);
+  border-bottom: #d0d0d0 1px solid;
   padding: 8px;
 }
 
@@ -50,7 +51,7 @@ header > *:last-child {
   text-align: center;
   background-color: transparent;
   border-radius: 6px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid #c8c8c8;
   cursor: pointer;
   color: inherit;
   font-size: 15px;
@@ -77,9 +78,13 @@ header > *:last-child {
   margin: 0;
 }
 
-.virt-list li {
+.virt-list > li {
   padding: 8px;
   border-bottom: 1px solid #d0d0d0;
+  cursor: pointer;
+}
+.virt-list > li:last-child {
+  border-bottom: none;
 }
 
 .list-link:hover, .list-link:visited, .list-link:link, .list-link:active {
