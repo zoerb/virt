@@ -28,7 +28,11 @@
                 om/IRender
                 (render [_] (dom/li nil message))))
             (:messages channel)))
-        (dom/input nil)))))
+        (dom/form #js {:onSubmit (fn [e]
+                                   (put! comm [:message (om/get-state owner :value)])
+                                   (.preventDefault e))}
+                  (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
+                                  :value (om/get-state owner :value)}))))))
 
 (defn branch-channel [app owner {:keys [channel]}]
   (reify
@@ -63,6 +67,7 @@
                 (case msg
                   :navigate (om/set-state! owner :page-stack (conj (om/get-state owner :page-stack) value))
                   :set-header-text (go (>! (om/get-shared owner :api-comm) [msg value]))
+                  :message (.log js/console value)
                   nil))))
         (set! (.-onmessage ws)
           (fn [e]
