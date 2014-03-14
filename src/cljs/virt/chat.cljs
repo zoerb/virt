@@ -18,6 +18,13 @@
 
 (defn leaf-channel [channel owner]
   (reify
+    om/IWillMount
+    (will-mount [_]
+      (let [wsUri (str "ws://" window.location.host "/api/watch/a")
+            ws (js/WebSocket. wsUri)]
+        (set! (.-onmessage ws)
+          (fn [e]
+            (om/transact! channel :messages #(conj % (.-data e)))))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div nil
@@ -29,8 +36,10 @@
                 (render [_] (dom/li nil message))))
             (:messages channel)))
         (dom/form #js {:onSubmit (fn [e]
-                                   (put! comm [:message (om/get-state owner :value)])
-                                   (.preventDefault e))}
+                                   (.preventDefault e)
+                                   (om/transact! channel :messages
+                                     #(conj % (om/get-state owner :value)))
+                                   (om/set-state! owner :value ""))}
                   (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
                                   :value (om/get-state owner :value)}))))))
 
