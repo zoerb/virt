@@ -11,19 +11,19 @@
 (defn chat-init [ch]
   (receive-all ch #(println "message: " %)))
 
-(defn chat-handler [ch room]
-  (let [chat (named-channel room chat-init)]
+(defn chat-handler [ch id]
+  (let [chat (named-channel id chat-init)]
     (siphon chat ch)
     (siphon ch chat)))
 
 (defn chat [ch request]
   (let [params (:route-params request)
-        room (:room params)]
-    (chat-handler ch room)))
+        id (:id params)]
+    (chat-handler ch id)))
 
 (defroutes app-routes
   (route/resources "/")
-  (GET ["/api/watch/:room", :room #"[a-zA-Z]+"] {}
+  (GET ["/api/watch/:id", :id #"[0-9A-Za-z]+"] {}
        (wrap-aleph-handler chat))
   (GET "/*" {:keys [uri]} (resp/resource-response "index.html" {:root "public"}))
   (route/not-found "Page not found"))
