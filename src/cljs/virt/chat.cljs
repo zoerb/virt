@@ -9,7 +9,7 @@
 (def app-state
   (atom {:root-channel {:title "Chat" :node-type :branch :children #{0x001 0x002 0x003}}
          :channels {0x001 {:title "hi" :node-type :branch :children #{0xAA0 0xAA1 0xAA2}}
-                    0xAA0 {:title "hi1" :node-type :leaf :messages ["o hullo there" "howdy"]}
+                    0xAA0 {:title "hi1" :node-type :leaf :messages []}
                     0xAA1 {:title "hi2" :node-type :leaf}
                     0xAA2 {:title "hi3" :node-type :leaf}
                     0x002 {:title "howdy" :node-type :branch}
@@ -39,7 +39,7 @@
       (go (>! (om/get-state owner :comm) [:close])))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/div nil
+      (dom/div #js {:className "leaf-channel"}
         (apply dom/ul #js {:className "virt-list"}
           (om/build-all
             (fn [message owner]
@@ -50,10 +50,12 @@
         (dom/form #js {:onSubmit (fn [e]
                                    (.preventDefault e)
                                    (let [msg (om/get-state owner :value)]
-                                     #_(om/transact! channel :messages
-                                       #(conj % msg))
-                                     (put! (om/get-state owner :comm) [:send-message msg]))
-                                   (om/set-state! owner :value ""))}
+                                     (if-not (empty? msg)
+                                       (do
+                                         #_(om/transact! channel :messages
+                                           #(conj % msg))
+                                         (put! (om/get-state owner :comm) [:send-message msg])
+                                         (om/set-state! owner :value "")))))}
                   (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
                                   :value (om/get-state owner :value)}))))))
 
@@ -94,7 +96,7 @@
     (render-state [_ {:keys [comm page-stack]}]
       (dom/div nil
         (let [cur-channel-id (last page-stack)
-              cur-channel (if (not cur-channel-id)
+              cur-channel (if-not cur-channel-id
                             (:root-channel app)
                             (get (:channels app) cur-channel-id))
               m {:init-state {:comm comm}}]

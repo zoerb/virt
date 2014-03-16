@@ -30,4 +30,4 @@
 
 (defn -main [& args]
   (start-http-server (wrap-ring-handler app-routes)
-                     {:host "localhost" :port 3000 :websocket true}))
+                     {:port 3000 :websocket true}))

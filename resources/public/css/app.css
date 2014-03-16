@@ -43,7 +43,6 @@ header > *:last-child {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: bold;
   font-size: 20px;
 }
 
@@ -53,7 +52,7 @@ header > *:last-child {
   border-radius: 6px;
   border: 1px solid #c8c8c8;
   cursor: pointer;
-  color: inherit;
+  color: #909090;
   font-size: 15px;
   line-height: 15px;
   padding: 6px 9px;
@@ -70,6 +69,21 @@ header > *:last-child {
 .create-form input button {
   display: inline-block;
   margin: auto;
+}
+
+.leaf-channel form {
+  padding: 0 9px;
+}
+
+.leaf-channel input {
+  width: 100%;
+  padding: 6px;
+  border: 1px #d0d0d0 solid;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  color: #555555;
+  font-size: inherit;
+  font-family: inherit;
 }
 
 .virt-list {
