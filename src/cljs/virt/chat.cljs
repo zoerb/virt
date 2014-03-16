@@ -37,9 +37,6 @@
     om/IWillUnmount
     (will-unmount [_]
       (go (>! (om/get-state owner :comm) [:close])))
-    om/IDidUpdate
-    (did-update [_ _ _]
-      (.scrollTo js/window 0 (.. js/document -body -scrollHeight)))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div #js {:className "leaf-channel"}
@@ -59,7 +56,7 @@
                                            #(conj % msg))
                                          (put! (om/get-state owner :comm) [:send-message msg])
                                          (om/set-state! owner :value "")))))}
-                  (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.. e -target -value)))
+                  (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
                                   :value (om/get-state owner :value)}))))))
 
 (defn branch-channel [app owner {:keys [channel]}]
