@@ -32,7 +32,11 @@
               (let [[msg value] (<! comm)]
                 (case msg
                   :send-message (.send ws value)
+                  :close (.close ws)
                   nil))))))
+    om/IWillUnmount
+    (will-unmount [_]
+      (go (>! (om/get-state owner :comm) [:close])))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div nil
