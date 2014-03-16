@@ -26,12 +26,12 @@
         (set! (.-onmessage ws)
           (fn [e]
             ;(om/update! channel :messages (cljs.reader/read-string (.-data e)))
-            (om/transact! channel :messages (fn [msgs] msgs))))
+            (om/transact! channel :messages #(conj % (.-data e)))))
         (om/set-state! owner :comm comm)
         (go (while true
               (let [[msg value] (<! comm)]
                 (case msg
-                  :send-message (.send ws (pr value))
+                  :send-message (.send ws value)
                   nil))))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
@@ -46,7 +46,7 @@
         (dom/form #js {:onSubmit (fn [e]
                                    (.preventDefault e)
                                    (let [msg (om/get-state owner :value)]
-                                     (om/transact! channel :messages
+                                     #_(om/transact! channel :messages
                                        #(conj % msg))
                                      (put! (om/get-state owner :comm) [:send-message msg]))
                                    (om/set-state! owner :value ""))}
