@@ -3,13 +3,10 @@
   (:require [cljs.core.async :refer [put! <! >! chan timeout alts!]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [virt.utils :refer []]))
+            [cljs-http.client :as http]))
 
 
-(def app-state
-  (atom {:cosms {0x001 {:title "cosm1" :app :chat}
-                 0x002 {:title "cosm2" :app :chat}
-                 0x003 {:title "cosm3" :app :chat}}}))
+(def app-state (atom {}))
 
 
 (defn list-item [id-item owner]
@@ -21,14 +18,16 @@
             api-comm (om/get-shared owner :api-comm)
             app (:app item)
             title (:title item)]
-        (dom/li #js {:onClick (fn [e] (put! api-comm [:set-app app])
-                                      (put! api-comm [:set-header-text title]))}
+        (dom/li #js {:onClick (fn [e] (put! api-comm [:set-app {:app app :id id}])
+                                      (put! api-comm [:set-header-text {:title title}]))}
                  (:title item))))))
 
 (defn main [app owner]
   (reify
     om/IWillMount
     (will-mount [_]
+      (go (let [response (<! (http/get "/api/cosms"))]
+            (om/update! app :cosms (:body response))))
       (let [comm (chan)]
         (om/set-state! owner :comm comm)
         (go (while true

@@ -3,17 +3,10 @@
   (:require [cljs.core.async :refer [put! <! >! chan timeout]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [virt.utils :refer []]))
+            [cljs-http.client :as http]))
 
 
-(def app-state
-  (atom {:root-channel {:title "Chat" :node-type :branch :children #{0x001 0x002 0x003}}
-         :channels {0x001 {:title "hi" :node-type :branch :children #{0xAA0 0xAA1 0xAA2}}
-                    0xAA0 {:title "hi1" :node-type :leaf :messages []}
-                    0xAA1 {:title "hi2" :node-type :leaf}
-                    0xAA2 {:title "hi3" :node-type :leaf}
-                    0x002 {:title "howdy" :node-type :branch}
-                    0x003 {:title "how's it goin" :node-type :branch}}}))
+(def app-state (atom {}))
 
 
 (defn leaf-channel [channel owner {:keys [id]}]
@@ -83,6 +76,8 @@
       {:page-stack []})
     om/IWillMount
     (will-mount [_]
+      (go (let [response (<! (http/get (str "/api/cosm/" (om/get-shared owner :id))))]
+            (om/update! app :cosms (:body response))))
       (let [comm (chan)]
         (om/set-state! owner :comm comm)
         (go (while true
@@ -102,7 +97,8 @@
               m {:init-state {:comm comm}}]
           (case (:node-type cur-channel)
             :branch (om/build branch-channel app (assoc m :opts {:channel cur-channel}))
-            :leaf (om/build leaf-channel cur-channel (assoc m :opts {:id cur-channel-id}))))))))
+            :leaf (om/build leaf-channel cur-channel (assoc m :opts {:id cur-channel-id}))
+            nil))))))
 
-(defn attach [target comm]
-  (om/root main app-state {:target target :shared {:api-comm comm}}))
+(defn attach [target id comm]
+  (om/root main app-state {:target target :shared {:id id :api-comm comm}}))

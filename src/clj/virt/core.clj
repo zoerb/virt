@@ -17,24 +17,35 @@
                 :app :chat}}))
 
 (def cosm-data
-  (atom {0x001 {:channels
+  (atom {0x001 {:root-channel {:title "Chat" :node-type :branch :children #{0x001 0x002 0x003}}
+                :channels
                 {0x001 {:title "hi" :node-type :branch :children #{0xAA0 0xAA1 0xAA2}}
                  0xAA0 {:title "hi1" :node-type :leaf :messages []}
                  0xAA1 {:title "hi2" :node-type :leaf}
                  0xAA2 {:title "hi3" :node-type :leaf}
                  0x002 {:title "howdy" :node-type :branch}
                  0x003 {:title "how's it goin" :node-type :branch}}}
-         0x002 {:channels
+         0x002 {:root-channel {:title "Chat" :node-type :branch :children #{0x101}}
+                :channels
                 {0x101 {:title "one" :node-type :branch :children #{0xBA0}}
                  0xBA0 {:title "another one!" :node-type :branch :children #{0xBA1}}
                  0xBA1 {:title "another nother one!" :node-type :leaf :messages ["works?" "works."]}}}
-         0x003 {:channels {}}}))
+         0x003 {:root-channel {}
+                :channels {}}}))
 
 
 (defn cosms-handler [request]
   {:status 200
    :headers {"Content-Type" "application/edn"}
    :body (pr-str @cosms)})
+
+(defn cosm-data-handler [request]
+  (let [params (:route-params request)
+        id (:id params)]
+    (println id)
+    {:status 200
+     :headers {"Content-Type" "application/edn"}
+     :body (pr-str (get-in @cosm-data [id]))}))
 
 (defn chat-handler [ch cosm-id-str channel-id-str]
   (let [chat (named-channel (str cosm-id-str "/" channel-id-str) nil)
@@ -55,6 +66,7 @@
   (GET ["/api/watch/:cosm-id/:channel-id", :cosm-id #"[0-9A-Za-z]+", :channel-id #"[0-9A-Za-z]+"] {}
        (wrap-aleph-handler chat))
   (GET "/api/cosms" [] cosms-handler)
+  (GET "/api/cosm/:id" [id] cosm-data-handler)
   (GET "/*" {:keys [uri]} (resp/resource-response "index.html" {:root "public"}))
   (route/not-found "Page not found"))
 

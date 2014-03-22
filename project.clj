@@ -9,7 +9,7 @@
                  [ring/ring-core "1.2.1"]
                  [javax.servlet/servlet-api "2.5"]
                  [compojure "1.1.6"]
-                 [cljs-http "0.1.2"]
+                 [cljs-http "0.1.8"]
                  [aleph "0.3.2"]
                  [cheshire "5.3.1"]
                  [secretary "1.0.0"]

@@ -45,7 +45,7 @@
           (if show-home-button
             (dom/button #js {:id "home-button"
                              :className "transparent-button"
-                             :onClick #(put! comm [:set-app :home])}
+                             :onClick #(put! comm [:set-app {:app :home}])}
                         "Home")))
         (dom/div nil
           (dom/div #js {:id "header-title"} title))
@@ -61,23 +61,23 @@
       (let [comm (chan)]
         (om/set-state! owner :comm comm)
         (go (while true
-              (let [[msg value] (<! comm)]
+              (let [[msg data] (<! comm)]
                 (case msg
                   :set-app
-                  (case value
+                  (case (:app data)
                     :home
                     (do
                       (virt.cosm-list/attach content-target comm)
                       (om/set-state! owner :show-home-button false))
                     :chat
                     (do
-                      (virt.chat/attach content-target comm)
+                      (virt.chat/attach content-target (:id data) comm)
                       (om/set-state! owner :show-home-button true)))
                   :set-header-text
                   (om/set-state! owner :title value)
                   nil))))
         (set-up-history comm)
-        (go (>! comm [:set-app :home]))))
+        (go (>! comm [:set-app {:app :home}]))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (om/build header app {:init-state {:comm comm}
