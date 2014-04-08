@@ -41,8 +41,7 @@
 
 (defn cosm-data-handler [request]
   (let [params (:route-params request)
-        id (:id params)]
-    (println id)
+        id (read-string (:id params))]
     {:status 200
      :headers {"Content-Type" "application/edn"}
      :body (pr-str (get-in @cosm-data [id]))}))
@@ -66,7 +65,7 @@
   (GET ["/api/watch/:cosm-id/:channel-id", :cosm-id #"[0-9A-Za-z]+", :channel-id #"[0-9A-Za-z]+"] {}
        (wrap-aleph-handler chat))
   (GET "/api/cosms" [] cosms-handler)
-  (GET "/api/cosm/:id" [id] cosm-data-handler)
+  (GET "/api/cosm/:id" [] cosm-data-handler)
   (GET "/*" {:keys [uri]} (resp/resource-response "index.html" {:root "public"}))
   (route/not-found "Page not found"))
 
