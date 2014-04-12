@@ -50,7 +50,7 @@
   (let [chat (named-channel (str cosm-id-str "/" channel-id-str) nil)
         cosm-id (Integer/parseInt cosm-id-str)
         channel-id (Integer/parseInt channel-id-str)]
-    (enqueue ch (get-in @cosm-data [cosm-id channel-id]))
+    ;(enqueue ch (print (get-in @cosm-data [cosm-id :channels channel-id :messages])))
     (siphon chat ch)
     (siphon ch chat)))
 

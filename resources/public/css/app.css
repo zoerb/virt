@@ -100,9 +100,6 @@ header > *:last-child {
   border-bottom: 1px solid #d0d0d0;
   cursor: pointer;
 }
-.virt-list > li:last-child {
-  border-bottom: none;
-}
 
 .list-link:hover, .list-link:visited, .list-link:link, .list-link:active {
   text-decoration: none;

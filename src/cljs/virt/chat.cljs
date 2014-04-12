@@ -9,11 +9,11 @@
 (def app-state (atom {}))
 
 
-(defn leaf-channel [channel owner {:keys [id]}]
+(defn leaf-channel [channel owner {:keys [channel-id]}]
   (reify
     om/IWillMount
     (will-mount [_]
-      (let [wsUri (str "ws://" window.location.host (str "/api/watch/" id))
+      (let [wsUri (str "ws://" window.location.host (str "/api/watch/" (om/get-shared owner :cosm-id) "/" channel-id))
             ws (js/WebSocket. wsUri)
             comm (chan)]
         (set! (.-onmessage ws)
@@ -76,7 +76,7 @@
       {:page-stack []})
     om/IWillMount
     (will-mount [_]
-      (go (let [response (<! (http/get (str "/api/cosm/" (om/get-shared owner :id))))]
+      (go (let [response (<! (http/get (str "/api/cosm/" (om/get-shared owner :cosm-id))))]
             (om/update! app (:body response))))
       (let [comm (chan)]
         (om/set-state! owner :comm comm)
@@ -97,8 +97,8 @@
               m {:init-state {:comm comm}}]
           (case (:node-type cur-channel)
             :branch (om/build branch-channel app (assoc m :opts {:channel cur-channel}))
-            :leaf (om/build leaf-channel cur-channel (assoc m :opts {:id cur-channel-id}))
+            :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id cur-channel-id}))
             nil))))))
 
-(defn attach [target id comm]
-  (om/root main app-state {:target target :shared {:id id :api-comm comm}}))
+(defn attach [target cosm-id comm]
+  (om/root main app-state {:target target :shared {:cosm-id cosm-id :api-comm comm}}))
