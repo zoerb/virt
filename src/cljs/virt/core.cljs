@@ -73,8 +73,8 @@
                     (do
                       (virt.chat/attach content-target (:id data) comm)
                       (om/set-state! owner :show-home-button true)))
-                  :set-header-text
-                  (om/set-state! owner :title value)
+                  ;:set-header-text
+                  ;(om/set-state! owner :title value)
                   nil))))
         (set-up-history comm)
         (go (>! comm [:set-app {:app :home}]))))

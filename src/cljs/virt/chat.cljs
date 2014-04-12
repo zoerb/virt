@@ -77,7 +77,7 @@
     om/IWillMount
     (will-mount [_]
       (go (let [response (<! (http/get (str "/api/cosm/" (om/get-shared owner :id))))]
-            (om/update! app :cosms (:body response))))
+            (om/update! app (:body response))))
       (let [comm (chan)]
         (om/set-state! owner :comm comm)
         (go (while true
