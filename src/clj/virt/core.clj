@@ -46,24 +46,19 @@
      :headers {"Content-Type" "application/edn"}
      :body (pr-str (get-in @cosm-data [id]))}))
 
-(defn chat-handler [ch cosm-id-str channel-id-str]
-  (let [chat (named-channel (str cosm-id-str "/" channel-id-str) nil)
-        cosm-id (Integer/parseInt cosm-id-str)
-        channel-id (Integer/parseInt channel-id-str)]
+(defn chat-handler [ch request]
+  (let [params (:route-params request)
+        cosm-id (Integer/parseInt (:cosm-id params))
+        channel-id (Integer/parseInt (:channel-id params))
+        chat (named-channel (str cosm-id "/" channel-id) nil)]
     ;(enqueue ch (print (get-in @cosm-data [cosm-id :channels channel-id :messages])))
     (siphon chat ch)
     (siphon ch chat)))
 
-(defn chat [ch request]
-  (let [params (:route-params request)
-        cosm-id (:cosm-id params)
-        channel-id (:channel-id params)]
-    (chat-handler ch cosm-id channel-id)))
-
 (defroutes app-routes
   (route/resources "/")
   (GET ["/api/watch/:cosm-id/:channel-id", :cosm-id #"[0-9A-Za-z]+", :channel-id #"[0-9A-Za-z]+"] {}
-       (wrap-aleph-handler chat))
+       (wrap-aleph-handler chat-handler))
   (GET "/api/cosms" [] cosms-handler)
   (GET "/api/cosm/:id" [] cosm-data-handler)
   (GET "/*" {:keys [uri]} (resp/resource-response "index.html" {:root "public"}))
