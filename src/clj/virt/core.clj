@@ -44,14 +44,20 @@
         id (read-string (:id params))]
     {:status 200
      :headers {"Content-Type" "application/edn"}
-     :body (pr-str @(get-in cosm-data [id]))}))
+     :body (pr-str @(get cosm-data id))}))
+
+(defn add-msg [cosm-id channel-id msg]
+  (swap! (get cosm-data cosm-id)
+         (fn [c] (update-in c [:channels channel-id :messages]
+                   #(conj % msg)))))
 
 (defn chat-handler [ch request]
   (let [params (:route-params request)
         cosm-id (Integer/parseInt (:cosm-id params))
         channel-id (Integer/parseInt (:channel-id params))
-        chat (named-channel (str cosm-id "/" channel-id) nil)]
-    ;(enqueue ch (print @(get-in cosm-data [cosm-id :channels channel-id :messages])))
+        chat (named-channel
+               (str cosm-id "/" channel-id)
+               (fn [new-ch] (receive-all new-ch #(add-msg cosm-id channel-id %))))]
     (siphon chat ch)
     (siphon ch chat)))
 
