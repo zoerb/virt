@@ -24,19 +24,16 @@
                 :output-to "resources/public/js/virt.js"
                 :source-map "resources/public/js/virt.js.map"
                 :output-dir "resources/public/js/out"
-                :optimizations :none
-                :externs ["om/externs/react.js"]}}
+                :optimizations :none}}
              {:id "release"
               :source-paths ["src/cljs"]
               :compiler {
                 :output-to "resources/public/js/virt.js"
                 :optimizations :advanced
                 :pretty-print false
-                :output-wrapper false
-                :preamble ["om/react.min.js"]
-                :externs ["om/externs/react.js"]
-                :closure-warnings
-                {:non-standard-jsdoc :off}}}]}
+                :preamble ["react/react.min.js"]
+                :externs ["react/externs/react.js"]
+                :closure-warnings{:non-standard-jsdoc :off}}}]}
   :ring {:handler virt.core/app}
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
   :main virt.core)
