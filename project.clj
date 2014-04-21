@@ -13,13 +13,15 @@
                  [aleph "0.3.2"]
                  [cheshire "5.3.1"]
                  [secretary "1.0.0"]
-                 [om "0.5.0"]
-                 [com.cemerick/piggieback "0.1.2"]]
-  :plugins [[lein-cljsbuild "1.0.2"]
-            [lein-ring "0.8.10"]]
+                 [om "0.5.0"]]
+  :plugins [[lein-cljsbuild "1.0.2"]]
+  :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.1.2"]
+                                  [org.clojure/tools.namespace "0.2.4"]]
+                   :source-paths ["dev/clj" "dev/cljs"]
+                   :injections [(require '[virt.dev :as dev])]}}
   :cljsbuild {
     :builds [{:id "dev"
-              :source-paths ["src/cljs"]
+              :source-paths ["src/cljs" "dev/cljs"]
               :compiler {
                 :output-to "resources/public/js/virt.js"
                 :source-map "resources/public/js/virt.js.map"
@@ -34,6 +36,5 @@
                 :preamble ["react/react.min.js"]
                 :externs ["react/externs/react.js"]
                 :closure-warnings{:non-standard-jsdoc :off}}}]}
-  :ring {:handler virt.core/app}
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
   :main virt.core)

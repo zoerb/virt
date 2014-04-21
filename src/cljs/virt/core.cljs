@@ -6,7 +6,6 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
-            virt.dev
             virt.cosm-list
             virt.chat)
   (:import [goog History]
