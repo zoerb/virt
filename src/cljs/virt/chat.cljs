@@ -40,17 +40,19 @@
                 om/IRender
                 (render [_] (dom/li nil message))))
             (:messages channel)))
-        (dom/form #js {:onSubmit (fn [e]
-                                   (.preventDefault e)
-                                   (let [msg (om/get-state owner :value)]
-                                     (if-not (empty? msg)
-                                       (do
-                                         #_(om/transact! channel :messages
-                                           #(conj % msg))
-                                         (put! (om/get-state owner :comm) [:send-message msg])
-                                         (om/set-state! owner :value "")))))}
-                  (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
-                                  :value (om/get-state owner :value)}))))))
+        (dom/form
+          #js {:onSubmit
+               (fn [e]
+                 (.preventDefault e)
+                 (let [msg (om/get-state owner :value)]
+                   (if-not (empty? msg)
+                     (do
+                       #_(om/transact! channel :messages
+                                       #(conj % msg))
+                       (put! (om/get-state owner :comm) [:send-message msg])
+                       (om/set-state! owner :value "")))))}
+          (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
+                          :value (om/get-state owner :value)}))))))
 
 (defn branch-channel [app owner {:keys [channel]}]
   (reify
