@@ -9,12 +9,13 @@
 
 
 (def cosms
-  (atom {0x001 {:title "Cosm1"
-                :app :chat}
-         0x002 {:title "Cosm2"
-                :app :chat}
-         0x003 {:title "Cosm3"
-                :app :chat}}))
+  (atom {:cosms {0x001 {:title "Cosm1"
+                        :app :chat}
+                 0x002 {:title "Cosm2"
+                        :app :chat}
+                 0x003 {:title "Cosm3"
+                        :app :chat}}
+         :apps {:chat {:src "js/out/virt/chat.js"}}}))
 
 (def cosm-data
   {0x001 (atom {:root-channel {:title "Chat" :node-type :branch :children #{0x001 0x002 0x003}}

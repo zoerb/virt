@@ -1,13 +1,13 @@
 (ns virt.core
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [goog.events :as events]
-            [cljs.core.async :refer [put! <! >! chan timeout]]
+            [cljs.core.async :as async :refer [put! <! >! chan timeout]]
             cljs.reader
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
-            virt.cosm-list
-            virt.chat)
+            [cljs-http.client :as http]
+            virt.cosm-list)
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))
@@ -66,7 +66,7 @@
                   (case (:app data)
                     :home
                     (do
-                      (virt.cosm-list/attach content-target comm)
+                      (virt.cosm-list/attach content-target app-state comm)
                       (om/set-state! owner :show-home-button false))
                     :chat
                     (do
@@ -84,4 +84,29 @@
                                     :show-home-button (om/get-state owner :show-home-button)}}))))
 
 
-(om/root main app-state {:target (.getElementById js/document "header")})
+(defn add-script [comm src]
+  (let [head (aget (.getElementsByTagName js/document "head") 0)
+        script (.createElement js/document "script")]
+    (set! (.-type script) "text/javascript")
+    (set! (.-src script) src)
+    (set! (.-onload script) #(async/close! comm))
+    ; Append to head or elsewhere?
+    (.appendChild head script)))
+
+(defn init-page []
+  (go
+    (let [response (<! (http/get "/api/cosms"))
+          body (:body response)]
+      ; Wait for all scripts to load
+      (while (<!
+               (async/merge
+                 (doall
+                   (for [app (:apps body)]
+                     (let [c (chan)]
+                       (add-script c (:src (second app)))
+                       c))))))
+      (reset! app-state body)
+      ; TODO: load main app immediately, but wait for scripts before allowing cosms to be entered
+      (om/root main app-state {:target (.getElementById js/document "header")}))))
+
+(init-page)

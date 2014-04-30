@@ -2,11 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [cljs.core.async :refer [put! <! >! chan timeout alts!]]
             [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true]
-            [cljs-http.client :as http]))
-
-
-(def app-state (atom {}))
+            [om.dom :as dom :include-macros true]))
 
 
 (defn list-item [id-item owner]
@@ -20,14 +16,12 @@
             title (:title item)]
         (dom/li #js {:onClick (fn [e] (put! api-comm [:set-app {:app app :id id}])
                                       (put! api-comm [:set-header-text {:title title}]))}
-                 (:title item))))))
+                (:title item))))))
 
 (defn main [app owner]
   (reify
     om/IWillMount
     (will-mount [_]
-      (go (let [response (<! (http/get "/api/cosms"))]
-            (om/update! app :cosms (:body response))))
       (let [comm (chan)]
         (om/set-state! owner :comm comm)
         (go (while true
@@ -43,6 +37,6 @@
         (apply dom/ul #js {:className "virt-list"}
           (om/build-all list-item (:cosms app) {:init-state {:comm comm}}))))))
 
-(defn attach [target comm]
-  (om/root main app-state {:target target :shared {:api-comm comm}})
+(defn attach [target state comm]
+  (om/root main state {:target target :shared {:api-comm comm}})
   (go (>! comm [:set-header-text "Virt"])))
