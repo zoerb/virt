@@ -70,7 +70,7 @@
                       (om/set-state! owner :show-home-button false))
                     :chat
                     (do
-                      (virt.chat/attach content-target (:id data) comm)
+                      (js/proxy "virt.chat.attach" content-target (:id data) comm)
                       (om/set-state! owner :show-home-button true)))
                   ;:set-header-text
                   ;(om/set-state! owner :title value)
@@ -98,7 +98,7 @@
     (let [response (<! (http/get "/api/cosms"))
           body (:body response)]
       ; Wait for all scripts to load
-      (while (<!
+      #_(while (<!
                (async/merge
                  (doall
                    (for [app (:apps body)]

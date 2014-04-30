@@ -102,5 +102,5 @@
             :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id cur-channel-id}))
             nil))))))
 
-(defn attach [target cosm-id comm]
+(defn ^:export attach [target cosm-id comm]
   (om/root main app-state {:target target :shared {:cosm-id cosm-id :api-comm comm}}))
