@@ -63,14 +63,12 @@
               (let [[msg data] (<! comm)]
                 (case msg
                   :set-app
-                  (case (:app data)
-                    :home
+                  (if (= (:app data) :home)
                     (do
                       (virt.cosm-list/attach content-target app-state comm)
                       (om/set-state! owner :show-home-button false))
-                    :chat
-                    (do
-                      (js/proxy "virt.chat.attach" content-target (:id data) comm)
+                    (let [app-ns (:ns ((:app data) (:apps @app-state)))]
+                      (js/proxy (str app-ns ".attach") content-target (:id data) comm)
                       (om/set-state! owner :show-home-button true)))
                   ;:set-header-text
                   ;(om/set-state! owner :title value)
@@ -98,7 +96,7 @@
     (let [response (<! (http/get "/api/cosms"))
           body (:body response)]
       ; Wait for all scripts to load
-      #_(while (<!
+      (while (<!
                (async/merge
                  (doall
                    (for [app (:apps body)]
