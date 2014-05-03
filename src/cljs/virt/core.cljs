@@ -68,7 +68,7 @@
                       (virt.cosm-list/attach content-target app-state comm)
                       (om/set-state! owner :show-home-button false))
                     (let [app-ns (:ns ((:app data) (:apps @app-state)))]
-                      (js/proxy (str app-ns ".attach") content-target (:id data) comm)
+                      (js/proxy (str app-ns "/attach") content-target (:id data) comm)
                       (om/set-state! owner :show-home-button true)))
                   ;:set-header-text
                   ;(om/set-state! owner :title value)
