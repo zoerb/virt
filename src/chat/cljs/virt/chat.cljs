@@ -1,6 +1,7 @@
 (ns virt.chat
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
-  (:require [cljs.core.async :refer [put! <! >! chan timeout]]
+  (:require [clojure.string :as string]
+            [cljs.core.async :refer [put! <! >! chan timeout]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs-http.client :as http]))
@@ -8,6 +9,25 @@
 
 (def app-state (atom {}))
 
+
+(defn parse-url-param [param-name]
+  (let [encoded-param-name (string/replace (js/encodeURI param-name) #"[\.\+\*]" "\\$&")
+        re (js/RegExp (str "^(?:.*[&\\?]" encoded-param-name "(?:\\=([^&]*))?)?.*$") "i")]
+    (js/decodeURI (.replace (.. js/window -location -search) re "$1"))))
+
+
+(defn header [app owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
+      (dom/header nil
+        (dom/div nil)
+        (dom/div nil
+          (dom/div #js {:id "header-title"} "Chat"))
+        (dom/div nil
+          (dom/button #js {:id "new-button"
+                           :className "transparent-button"}
+                      "New"))))))
 
 (defn leaf-channel [channel owner {:keys [channel-id]}]
   (reify
@@ -86,21 +106,24 @@
               (let [[msg value] (<! comm)]
                 (case msg
                   :navigate (om/set-state! owner :page-stack (conj (om/get-state owner :page-stack) value))
-                  :set-header-text (go (>! (om/get-shared owner :api-comm) [msg value]))
                   :message (.log js/console value)
                   nil))))))
     om/IRenderState
     (render-state [_ {:keys [comm page-stack]}]
       (dom/div nil
-        (let [cur-channel-id (last page-stack)
-              cur-channel (if-not cur-channel-id
-                            (:root-channel app)
-                            (get (:channels app) cur-channel-id))
-              m {:init-state {:comm comm}}]
-          (case (:node-type cur-channel)
-            :branch (om/build branch-channel app (assoc m :opts {:channel cur-channel}))
-            :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id cur-channel-id}))
-            nil))))))
+        (dom/div #js {:id "header"}
+          (om/build header app))
+        (dom/div #js {:id "content"}
+          (let [cur-channel-id (last page-stack)
+                cur-channel (if-not cur-channel-id
+                              (:root-channel app)
+                              (get (:channels app) cur-channel-id))
+                m {:init-state {:comm comm}}]
+            (case (:node-type cur-channel)
+              :branch (om/build branch-channel app (assoc m :opts {:channel cur-channel}))
+              :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id cur-channel-id}))
+              nil)))))))
 
-(defn ^:export attach [target cosm-id comm]
-  (om/root main app-state {:target target :shared {:cosm-id cosm-id :api-comm comm}}))
+(om/root main app-state
+         {:target (.getElementById js/document "app")
+          :shared {:cosm-id (parse-url-param "id")}})

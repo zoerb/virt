@@ -37,7 +37,7 @@
 (defn header [app owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [comm title show-home-button]}]
+    (render-state [_ {:keys [comm]}]
       (dom/header nil
         (dom/div nil)
         (dom/div nil
@@ -47,15 +47,13 @@
                            :className "transparent-button"}
                       "New"))))))
 
-
 (defn list-item [id-item owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (let [id (first id-item)
             item (second id-item)
-            app (:app item)
-            title (:title item)]
+            app (:app item)]
         (dom/li #js {:onClick (fn [e] (put! comm [:set-app {:app app :id id}]))}
                 (:title item))))))
 
@@ -78,7 +76,7 @@
                 (case msg
                   :set-app
                   (let [cosm-link (:link ((:app data) (:apps @app-state)))]
-                    (set! (.-location js/window) cosm-link))
+                    (set! (.-location js/window) (str cosm-link "?id=" (:id data))))
                   nil))))
         (set-up-history comm)))
     om/IRenderState

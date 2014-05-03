@@ -1,7 +1,7 @@
 (defproject virt "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
-  :source-paths ["src/clj" "src/cljs"]
+  :source-paths ["src/core/clj" "src/core/cljs" "src/chat/clj" "src/chat/cljs"]
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.reader "0.8.2"]
                  [org.clojure/clojurescript "0.0-2156"]
@@ -20,21 +20,35 @@
                    :source-paths ["dev/clj" "dev/cljs"]
                    :injections [(require '[virt.dev :as dev])]}}
   :cljsbuild {
-    :builds [{:id "dev"
-              :source-paths ["src/cljs" "dev/cljs"]
+    :builds {:core-dev
+             {:source-paths ["src/core/cljs" "dev/cljs"]
               :compiler {
-                :output-to "resources/public/js/virt.js"
-                :source-map "resources/public/js/virt.js.map"
-                :output-dir "resources/public/js/out"
+                :output-to "resources/public/js/out/core/core.js"
+                :source-map "resources/public/js/out/core/core.js.map"
+                :output-dir "resources/public/js/out/core"
                 :optimizations :none}}
-             {:id "release"
-              :source-paths ["src/cljs"]
+             :core-prod
+             {:source-paths ["src/core/cljs"]
               :compiler {
-                :output-to "resources/public/js/virt.js"
+                :output-to "resources/public/js/core.js"
                 :optimizations :advanced
                 :pretty-print false
                 :preamble ["react/react.min.js"]
                 :externs ["react/externs/react.js"]
-                :closure-warnings {:non-standard-jsdoc :off}}}]}
+                :closure-warnings {:non-standard-jsdoc :off}}}
+             :chat-dev
+             {:source-paths ["src/chat/cljs" "dev/cljs"]
+              :compiler {
+                :output-to "resources/public/js/out/chat/chat.js"
+                :source-map "resources/public/js/out/chat/chat.js.map"
+                :output-dir "resources/public/js/out/chat"
+                :optimizations :none}}
+             :chat-prod
+             {:source-paths ["src/chat/cljs"]
+              :compiler {
+                :output-to "resources/public/js/chat.js"
+                :optimizations :advanced
+                :pretty-print false
+                :closure-warnings {:non-standard-jsdoc :off}}}}}
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
   :main virt.core)
