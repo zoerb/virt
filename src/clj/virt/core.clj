@@ -1,11 +1,10 @@
 (ns virt.core
-  (:use compojure.core
-        lamina.core
-        aleph.http)
   (:require [compojure.handler :as handler]
             [compojure.route :as route]
             [compojure.core :refer [GET POST defroutes]]
-            [ring.util.response :as resp]))
+            [ring.util.response :as resp]
+            [aleph.http :refer :all]
+            [lamina.core :refer :all]))
 
 
 (def cosms

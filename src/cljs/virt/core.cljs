@@ -96,13 +96,11 @@
     (let [response (<! (http/get "/api/cosms"))
           body (:body response)]
       ; Wait for all scripts to load
-      (while (<!
-               (async/merge
-                 (doall
-                   (for [app (:apps body)]
-                     (let [c (chan)]
-                       (add-script c (:src (second app)))
-                       c))))))
+      (while (<! (async/merge
+                   (doall (for [app (:apps body)]
+                            (let [c (chan)]
+                              (add-script c (:src (second app)))
+                              c))))))
       (reset! app-state body)
       ; TODO: load main app immediately, but wait for scripts before allowing cosms to be entered
       (om/root main app-state {:target (.getElementById js/document "header")}))))
