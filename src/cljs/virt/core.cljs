@@ -6,8 +6,7 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
-            [cljs-http.client :as http]
-            [virt.core.cosm-list :as cosm-list])
+            [cljs-http.client :as http])
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))
@@ -40,18 +39,33 @@
     om/IRenderState
     (render-state [_ {:keys [comm title show-home-button]}]
       (dom/header nil
+        (dom/div nil)
         (dom/div nil
-          (if show-home-button
-            (dom/button #js {:id "home-button"
-                             :className "transparent-button"
-                             :onClick #(put! comm [:set-app {:app :home}])}
-                        "Home")))
-        (dom/div nil
-          (dom/div #js {:id "header-title"} title))
+          (dom/div #js {:id "header-title"} "Virt"))
         (dom/div nil
           (dom/button #js {:id "new-button"
                            :className "transparent-button"}
                       "New"))))))
+
+
+(defn list-item [id-item owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
+      (let [id (first id-item)
+            item (second id-item)
+            app (:app item)
+            title (:title item)]
+        (dom/li #js {:onClick (fn [e] (put! comm [:set-app {:app app :id id}]))}
+                (:title item))))))
+
+(defn cosm-list [app owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
+      (dom/div #js {:id "cosm-content"}
+        (apply dom/ul #js {:className "virt-list"}
+          (om/build-all list-item (:cosms app) {:init-state {:comm comm}}))))))
 
 (defn main [app owner]
   (reify
@@ -63,46 +77,23 @@
               (let [[msg data] (<! comm)]
                 (case msg
                   :set-app
-                  (if (= (:app data) :home)
-                    (do
-                      (cosm-list/attach content-target app-state comm)
-                      (om/set-state! owner :show-home-button false))
-                    (let [app-ns (:ns ((:app data) (:apps @app-state)))]
-                      (js/proxy (str app-ns "/attach") content-target (:id data) comm)
-                      (om/set-state! owner :show-home-button true)))
-                  ;:set-header-text
-                  ;(om/set-state! owner :title value)
+                  (let [cosm-link (:link ((:app data) (:apps @app-state)))]
+                    (set! (.-location js/window) cosm-link))
                   nil))))
-        (set-up-history comm)
-        (go (>! comm [:set-app {:app :home}]))))
+        (set-up-history comm)))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (om/build header app {:init-state {:comm comm}
-                            :state {:title (om/get-state owner :title)
-                                    :show-home-button (om/get-state owner :show-home-button)}}))))
-
-
-(defn add-script [comm src]
-  (let [head (aget (.getElementsByTagName js/document "head") 0)
-        script (.createElement js/document "script")]
-    (set! (.-type script) "text/javascript")
-    (set! (.-src script) src)
-    (set! (.-onload script) #(async/close! comm))
-    ; Append to head or elsewhere?
-    (.appendChild head script)))
+      (dom/div nil
+        (dom/div #js {:id "header"}
+          (om/build header app {:init-state {:comm comm}}))
+        (dom/div #js {:id "content"}
+          (om/build cosm-list app {:init-state {:comm comm}}))))))
 
 (defn init-page []
   (go
     (let [response (<! (http/get "/api/cosms"))
           body (:body response)]
-      ; Wait for all scripts to load
-      (while (<! (async/merge
-                   (doall (for [app (:apps body)]
-                            (let [c (chan)]
-                              (add-script c (:src (second app)))
-                              c))))))
       (reset! app-state body)
-      ; TODO: load main app immediately, but wait for scripts before allowing cosms to be entered
-      (om/root main app-state {:target (.getElementById js/document "header")}))))
+      (om/root main app-state {:target (.getElementById js/document "app")}))))
 
 (init-page)
