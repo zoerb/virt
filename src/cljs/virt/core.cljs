@@ -7,7 +7,7 @@
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
             [cljs-http.client :as http]
-            virt.cosm-list)
+            [virt.core.cosm-list :as cosm-list])
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))
@@ -65,7 +65,7 @@
                   :set-app
                   (if (= (:app data) :home)
                     (do
-                      (virt.cosm-list/attach content-target app-state comm)
+                      (cosm-list/attach content-target app-state comm)
                       (om/set-state! owner :show-home-button false))
                     (let [app-ns (:ns ((:app data) (:apps @app-state)))]
                       (js/proxy (str app-ns "/attach") content-target (:id data) comm)

@@ -1,4 +1,4 @@
-(ns virt.cosm-list
+(ns virt.core.cosm-list
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [cljs.core.async :refer [put! <! >! chan timeout alts!]]
             [om.core :as om :include-macros true]
