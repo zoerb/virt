@@ -59,6 +59,12 @@
 
 (defn cosm-list [app owner]
   (reify
+    om/IWillMount
+    (will-mount [_]
+      (go
+        (let [response (<! (http/get "/api/cosms"))
+              body (:body response)]
+          (om/update! app body))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div #js {:id "cosm-content"}
@@ -87,11 +93,4 @@
         (dom/div #js {:id "content"}
           (om/build cosm-list app {:init-state {:comm comm}}))))))
 
-(defn init-page []
-  (go
-    (let [response (<! (http/get "/api/cosms"))
-          body (:body response)]
-      (reset! app-state body)
-      (om/root main app-state {:target (.getElementById js/document "app")}))))
-
-(init-page)
+(om/root main app-state {:target (.getElementById js/document "app")})
