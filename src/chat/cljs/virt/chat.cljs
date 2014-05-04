@@ -21,7 +21,11 @@
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/header nil
-        (dom/div nil)
+        (dom/div nil
+          (dom/button #js {:id "home-button"
+                           :className "transparent-button"
+                           :onClick #(set! (.-location js/window) "/")}
+                      "Home"))
         (dom/div nil
           (dom/div #js {:id "header-title"} "Chat"))
         (dom/div nil
