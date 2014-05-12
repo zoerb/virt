@@ -99,13 +99,13 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:page-stack []})
+      {:comm (chan)
+       :page-stack []})
     om/IWillMount
     (will-mount [_]
       (go (let [response (<! (http/get (str "/api/cosm/" (om/get-shared owner :cosm-id))))]
             (om/update! app (:body response))))
-      (let [comm (chan)]
-        (om/set-state! owner :comm comm)
+      (let [comm (om/get-state owner :comm)]
         (go (while true
               (let [[msg value] (<! comm)]
                 (case msg

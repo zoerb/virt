@@ -73,10 +73,12 @@
 
 (defn main [app owner]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:comm (chan)})
     om/IWillMount
     (will-mount [_]
-      (let [comm (chan)]
-        (om/set-state! owner :comm comm)
+      (let [comm (om/get-state owner :comm)]
         (go (while true
               (let [[msg data] (<! comm)]
                 (case msg
