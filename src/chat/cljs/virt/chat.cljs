@@ -78,10 +78,10 @@
           (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
                           :value (om/get-state owner :value)}))))))
 
-(defn branch-channel [app owner {:keys [channel]}]
+(defn branch-channel [app owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [comm]}]
+    (render-state [_ {:keys [comm channel]}]
       (apply dom/ul #js {:className "virt-list"}
         (om/build-all
           (fn [id-item owner]
@@ -124,7 +124,7 @@
                               (get (:channels app) cur-channel-id))
                 m {:init-state {:comm comm}}]
             (case (:node-type cur-channel)
-              :branch (om/build branch-channel app (assoc m :opts {:channel cur-channel}))
+              :branch (om/build branch-channel app (assoc m :state {:channel cur-channel}))
               :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id cur-channel-id}))
               nil)))))))
 

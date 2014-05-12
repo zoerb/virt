@@ -13,7 +13,7 @@
                  [aleph "0.3.2"]
                  [cheshire "5.3.1"]
                  [secretary "1.0.0"]
-                 [om "0.6.0"]]
+                 [om "0.6.2"]]
   :plugins [[lein-cljsbuild "1.0.2"]]
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.1.2"]
                                   [org.clojure/tools.namespace "0.2.4"]]
