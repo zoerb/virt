@@ -69,13 +69,27 @@ header > *:last-child {
   background-color: rgba(240,240,240,0.5);
 }
 
-.create-form {
+input {
+  border: 1px #d0d0d0 solid;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  color: #555555;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.new-channel {
   width: 100%;
   text-align: center;
+  padding: 40px 0;
 }
-.create-form input button {
-  display: inline-block;
-  margin: auto;
+.new-channel input {
+  width: 90%;
+  padding: 6px;
+}
+.new-channel button {
+  display: block;
+  margin: 15px auto;
 }
 
 .leaf-channel form {
@@ -85,12 +99,6 @@ header > *:last-child {
 .leaf-channel input {
   width: 100%;
   padding: 6px;
-  border: 1px #d0d0d0 solid;
-  -webkit-appearance: none;
-  box-sizing: border-box;
-  color: #555555;
-  font-size: inherit;
-  font-family: inherit;
 }
 
 .virt-list {

@@ -1,19 +1,13 @@
 (ns virt.chat
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
-  (:require [clojure.string :as string]
-            [cljs.core.async :refer [put! <! >! chan timeout]]
+  (:require [cljs.core.async :refer [put! <! >! chan timeout]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [cljs-http.client :as http]))
+            [cljs-http.client :as http]
+            virt.utils))
 
 
 (def app-state (atom {}))
-
-
-(defn parse-url-param [param-name]
-  (let [encoded-param-name (string/replace (js/encodeURI param-name) #"[\.\+\*]" "\\$&")
-        re (js/RegExp (str "^(?:.*[&\\?]" encoded-param-name "(?:\\=([^&]*))?)?.*$") "i")]
-    (js/decodeURI (.replace (.. js/window -location -search) re "$1"))))
 
 
 (defn header [app owner]
@@ -30,14 +24,15 @@
           (dom/div #js {:id "header-title"} "Chat"))
         (dom/div nil
           (dom/button #js {:id "new-button"
-                           :className "transparent-button"}
+                           :className "transparent-button"
+                           :onClick #(put! comm [:navigate :new])}
                       "New"))))))
 
 (defn leaf-channel [channel owner {:keys [channel-id]}]
   (reify
     om/IWillMount
     (will-mount [_]
-      (let [wsUri (str "ws://" window.location.host (str "/api/watch/" (om/get-shared owner :cosm-id) "/" channel-id))
+      (let [wsUri (str "ws://" window.location.host (str "/api/chat/" (om/get-shared owner :cosm-id) "/" channel-id))
             ws (js/WebSocket. wsUri)
             comm (chan)]
         (set! (.-onmessage ws)
@@ -94,6 +89,18 @@
                            (:title item))))))
           (select-keys (:channels app) (:children channel)))))))
 
+(defn new-channel [app owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
+      (dom/div #js {:className "new-channel"}
+        (dom/input #js {:placeholder "Title"
+                        :onChange (fn [e] (om/set-state! owner :title (.-value (.-target e))))
+                        :title (om/get-state owner :title)})
+        (dom/button #js {:className "transparent-button"
+                         :onClick #(put! comm [:new-channel (om/get-state owner :title)])}
+                    "Create")))))
+
 
 (defn main [app owner]
   (reify
@@ -103,31 +110,33 @@
        :page-stack []})
     om/IWillMount
     (will-mount [_]
-      (go (let [response (<! (http/get (str "/api/cosm/" (om/get-shared owner :cosm-id))))]
+      (go (let [response (<! (http/get (str "/api/chat/" (om/get-shared owner :cosm-id))))]
             (om/update! app (:body response))))
       (let [comm (om/get-state owner :comm)]
         (go (while true
               (let [[msg value] (<! comm)]
                 (case msg
-                  :navigate (om/set-state! owner :page-stack (conj (om/get-state owner :page-stack) value))
-                  :message (.log js/console value)
+                  :navigate (om/update-state! owner :page-stack #(conj % value))
+                  :new-channel (<! (http/post "/api/chats" {:edn-params {:name value}}))
                   nil))))))
     om/IRenderState
     (render-state [_ {:keys [comm page-stack]}]
       (dom/div nil
         (dom/div #js {:id "header"}
-          (om/build header app))
+          (om/build header app {:init-state {:comm comm}}))
         (dom/div #js {:id "content"}
-          (let [cur-channel-id (last page-stack)
-                cur-channel (if-not cur-channel-id
-                              (:root-channel app)
-                              (get (:channels app) cur-channel-id))
+          (let [page-id (last page-stack)
                 m {:init-state {:comm comm}}]
-            (case (:node-type cur-channel)
-              :branch (om/build branch-channel app (assoc m :state {:channel cur-channel}))
-              :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id cur-channel-id}))
-              nil)))))))
+            (case page-id
+              :new (om/build new-channel app m)
+              (let [cur-channel (if-not page-id
+                                  (:root-channel app)
+                                  (get (:channels app) page-id))]
+                (case (:node-type cur-channel)
+                  :branch (om/build branch-channel app (assoc m :state {:channel cur-channel}))
+                  :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id page-id}))
+                  nil)))))))))
 
 (om/root main app-state
          {:target (.getElementById js/document "app")
-          :shared {:cosm-id (parse-url-param "id")}})
+          :shared {:cosm-id (virt.utils/parse-url-param "id")}})
