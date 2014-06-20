@@ -16,8 +16,7 @@
   :plugins [[lein-cljsbuild "1.0.3"]]
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.1.3"]
                                   [org.clojure/tools.namespace "0.2.4"]]
-                   :source-paths ["dev/clj" "dev/cljs"]
-                   :injections [(require '[virt.dev :as dev])]}}
+                   :source-paths ["dev/clj" "dev/cljs"]}}
   :cljsbuild {
     :builds {:core-dev
              {:source-paths ["src/core/cljs" "dev/cljs"]
@@ -51,5 +50,4 @@
                 :preamble ["react/react.min.js"]
                 :externs ["react/externs/react.js"]
                 :closure-warnings {:non-standard-jsdoc :off}}}}}
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
-  :main virt.core)
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]})

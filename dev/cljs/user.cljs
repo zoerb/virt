@@ -1,4 +1,4 @@
-(ns virt.dev
+(ns user
   (:require [clojure.browser.repl :as repl]))
 
 (enable-console-print!)
