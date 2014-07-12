@@ -93,12 +93,15 @@
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/div #js {:className "new-channel"}
+      (dom/form #js {:className "new-channel"}
         (dom/input #js {:placeholder "Title"
                         :onChange (fn [e] (om/set-state! owner :title (.-value (.-target e))))
-                        :title (om/get-state owner :title)})
+                        :title (om/get-state owner :title)
+                        :autoFocus true})
         (dom/button #js {:className "transparent-button"
-                         :onClick #(put! comm [:new-channel (om/get-state owner :title)])}
+                         :onClick (fn [e]
+                                    (.preventDefault e)
+                                    (put! comm [:new-channel (om/get-state owner :title)]))}
                     "Create")))))
 
 
@@ -110,15 +113,24 @@
        :page-stack []})
     om/IWillMount
     (will-mount [_]
-      (go (let [response (<! (http/get (str "/api/chat/" (om/get-shared owner :cosm-id))))]
-            (om/update! app (:body response))))
-      (let [comm (om/get-state owner :comm)]
-        (go (while true
-              (let [[msg value] (<! comm)]
-                (case msg
-                  :navigate (om/update-state! owner :page-stack #(conj % value))
-                  :new-channel (<! (http/post "/api/chats" {:edn-params {:name value}}))
-                  nil))))))
+      (let [cosm-id (om/get-shared owner :cosm-id)]
+        (go (let [response (<! (http/get (str "/api/chat/" cosm-id)))]
+              (om/update! app (:body response))))
+        (let [comm (om/get-state owner :comm)]
+          (go (while true
+                (let [[msg value] (<! comm)]
+                  (case msg
+                    :navigate
+                    (om/update-state! owner :page-stack #(conj % value))
+                    :new-channel
+                    (let [response
+                          (<! (http/post "/api/chats"
+                                         {:edn-params {:name value
+                                                       :cosm-id cosm-id
+                                                       :channel-id (last (butlast (om/get-state owner :page-stack)))}}))]
+                      (om/update! app (:body response))
+                      (om/update-state! owner :page-stack #(butlast %)))
+                    nil)))))))
     om/IRenderState
     (render-state [_ {:keys [comm page-stack]}]
       (dom/div nil
@@ -138,4 +150,4 @@
 
 (om/root main app-state
          {:target (.getElementById js/document "app")
-          :shared {:cosm-id (virt.utils/parse-url-param "id")}})
+          :shared {:cosm-id (cljs.reader/read-string (virt.utils/parse-url-param "id"))}})

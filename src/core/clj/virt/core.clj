@@ -4,6 +4,7 @@
             [compojure.core :refer [GET POST defroutes]]
             [ring.util.response :as resp]
             [aleph.http :refer :all]
+            [aleph.formats :refer :all]
             [lamina.core :refer :all]))
 
 
@@ -35,6 +36,9 @@
    0x003 (atom {:root-channel {}
                 :channels {}})})
 
+(def next-id
+  (let [id (atom 0x00B)]
+    (fn [] (swap! id #(inc %)))))
 
 (defn cosms-handler [request]
   {:status 200
@@ -48,10 +52,23 @@
      :headers {"Content-Type" "application/edn"}
      :body (pr-str @(get chat-data id))}))
 
+(defn new-channel [cosm-id channel-id channel-name]
+  (let [new-id (next-id)]
+    (swap! (get chat-data cosm-id)
+           (fn [c]
+             (update-in c [:channels (or channel-id (:root-channel c)) :children]
+                        #(conj % new-id))))
+    (swap! (get chat-data cosm-id)
+           (fn [c]
+             (update-in c [:channels]
+                        #(conj % {new-id {:title channel-name :node-type :leaf :messages []}})))))
+  {:status 200
+   :headers {"Content-Type" "application/edn"}
+   :body (pr-str @(get chat-data cosm-id))})
+
 (defn new-chat-handler [request]
-  (let [params (:route-params request)]
-    (println (:body request))
-    {:status 200 :body "hi"}))
+  (let [body (read-string (slurp (:body request)))]
+    (new-channel (:cosm-id body) (:channel-id body) (:name body))))
 
 (defn add-msg [cosm-id channel-id msg]
   (swap! (get chat-data cosm-id)
