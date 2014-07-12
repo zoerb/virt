@@ -129,9 +129,8 @@
                 m {:init-state {:comm comm}}]
             (case page-id
               :new (om/build new-channel app m)
-              (let [cur-channel (if-not page-id
-                                  (:root-channel app)
-                                  (get (:channels app) page-id))]
+              (let [cur-channel (get (:channels app)
+                                     (or page-id (:root-channel app)))]
                 (case (:node-type cur-channel)
                   :branch (om/build branch-channel app (assoc m :state {:channel cur-channel}))
                   :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id page-id}))

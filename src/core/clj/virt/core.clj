@@ -17,19 +17,21 @@
          :apps {:chat {:link "/chat.html"}}}))
 
 (def chat-data
-  {0x001 (atom {:root-channel {:title "Chat" :node-type :branch :children #{0x001 0x002 0x003}}
+  {0x001 (atom {:root-channel 0x001
                 :channels
-                {0x001 {:title "hi" :node-type :branch :children #{0xAA0 0xAA1 0xAA2}}
-                 0xAA0 {:title "hi1" :node-type :leaf :messages []}
-                 0xAA1 {:title "hi2" :node-type :leaf}
-                 0xAA2 {:title "hi3" :node-type :leaf}
-                 0x002 {:title "howdy" :node-type :branch}
-                 0x003 {:title "how's it goin" :node-type :branch}}})
-   0x002 (atom {:root-channel {:title "Chat" :node-type :branch :children #{0x101}}
+                {0x001 {:title "Chat" :node-type :branch :children [0x002 0x006 0x007]}
+                 0x002 {:title "hi" :node-type :branch :children [0x003 0x004 0x005]}
+                 0x003 {:title "hi1" :node-type :leaf :messages []}
+                 0x004 {:title "hi2" :node-type :leaf}
+                 0x005 {:title "hi3" :node-type :leaf}
+                 0x006 {:title "howdy" :node-type :branch}
+                 0x007 {:title "how's it goin" :node-type :branch}}})
+   0x002 (atom {:root-channel 0x008
                 :channels
-                {0x101 {:title "one" :node-type :branch :children #{0xBA0}}
-                 0xBA0 {:title "another one!" :node-type :branch :children #{0xBA1}}
-                 0xBA1 {:title "another nother one!" :node-type :leaf :messages ["works?" "works."]}}})
+                {0x008 {:title "Chat" :node-type :branch :children [0x009]}
+                 0x009 {:title "one" :node-type :branch :children [0x00A]}
+                 0x00A {:title "another one!" :node-type :branch :children [0x00B]}
+                 0x00B {:title "another nother one!" :node-type :leaf :messages ["works?" "works."]}}})
    0x003 (atom {:root-channel {}
                 :channels {}})})
 
