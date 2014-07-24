@@ -55,7 +55,8 @@
             item (second id-item)
             app (:app item)]
         (dom/li #js {:onClick (fn [e] (put! comm [:set-app {:app app :id id}]))}
-                (:title item))))))
+          (dom/div #js {:className "title"} (:title item))
+          (dom/div #js {:className "aux"} "Test"))))))
 
 (defn cosm-list [app owner]
   (reify
