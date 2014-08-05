@@ -12,7 +12,7 @@
                  [cljs-http "0.1.11"]
                  [aleph "0.3.2"]
                  [secretary "1.1.1"]
-                 [om "0.6.5"]]
+                 [om "0.7.1"]]
   :plugins [[lein-cljsbuild "1.0.3"]]
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.1.3"]
                                   [org.clojure/tools.namespace "0.2.4"]]
