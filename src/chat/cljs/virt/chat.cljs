@@ -63,15 +63,15 @@
           #js {:onSubmit
                (fn [e]
                  (.preventDefault e)
-                 (let [msg (om/get-state owner :value)]
+                 (let [message-input (om/get-node owner "message-input")
+                       msg (.-value message-input)]
                    (if-not (empty? msg)
                      (do
                        #_(om/transact! channel :messages
                                        #(conj % msg))
                        (put! (om/get-state owner :comm) [:send-message msg])
-                       (om/set-state! owner :value "")))))}
-          (dom/input #js {:onChange (fn [e] (om/set-state! owner :value (.-value (.-target e))))
-                          :value (om/get-state owner :value)}))))))
+                       (set! (.-value message-input) "")))))}
+          (dom/input #js {:ref "message-input"}))))))
 
 (defn branch-channel [app owner]
   (reify
@@ -94,15 +94,14 @@
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/form #js {:className "new-channel"}
-        (dom/input #js {:placeholder "Title"
-                        :onChange (fn [e] (om/set-state! owner :title (.-value (.-target e))))
-                        :title (om/get-state owner :title)
-                        :autoFocus true})
-        (dom/button #js {:className "transparent-button"
-                         :onClick (fn [e]
-                                    (.preventDefault e)
-                                    (put! comm [:new-channel (om/get-state owner :title)]))}
-                    "Create")))))
+        (dom/input #js {:ref "new-channel-input" :placeholder "Title" :autoFocus true})
+        (dom/button
+          #js {:className "transparent-button"
+               :onClick (fn [e]
+                          (.preventDefault e)
+                          (put! comm [:new-channel
+                                      (.-value (om/get-node owner "new-channel-input"))]))}
+          "Create")))))
 
 
 (defn main [app owner]
