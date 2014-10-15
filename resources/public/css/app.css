@@ -80,27 +80,27 @@ input {
   font-family: inherit;
 }
 
-.new-channel {
+.new-chat {
   width: 100%;
   text-align: center;
   padding: 40px 0;
 }
-.new-channel input {
+.new-chat input {
   width: 90%;
   padding: 6px;
 }
-.new-channel button {
+.new-chat button {
   display: block;
   margin: 15px auto;
 }
 
-.leaf-channel form {
+.leaf-chat form {
   box-sizing: border-box;
   padding: 6px;
   width: 100%;
 }
 
-.leaf-channel input {
+.leaf-chat input {
   width: 100%;
   padding: 6px;
   margin: 0;

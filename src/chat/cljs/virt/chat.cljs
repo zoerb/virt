@@ -28,17 +28,17 @@
                            :onClick #(put! comm [:navigate :new])}
                       "New"))))))
 
-(defn leaf-channel [channel owner {:keys [channel-id]}]
+(defn leaf-chat [chat owner {:keys [chat-id]}]
   (reify
     om/IWillMount
     (will-mount [_]
-      (let [wsUri (str "ws://" window.location.host (str "/api/chat/" (om/get-shared owner :cosm-id) "/" channel-id))
+      (let [wsUri (str "ws://" window.location.host (str "/api/chat/" (om/get-shared owner :channel-id) "/" chat-id))
             ws (js/WebSocket. wsUri)
             comm (chan)]
         (set! (.-onmessage ws)
           (fn [e]
-            ;(om/update! channel :messages (cljs.reader/read-string (.-data e)))
-            (om/transact! channel :messages #(conj % (.-data e)))))
+            ;(om/update! chat :messages (cljs.reader/read-string (.-data e)))
+            (om/transact! chat :messages #(conj % (.-data e)))))
         (om/set-state! owner :comm comm)
         (go (while true
               (let [[msg value] (<! comm)]
@@ -51,14 +51,14 @@
       (go (>! (om/get-state owner :comm) [:close])))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/div #js {:className "leaf-channel"}
+      (dom/div #js {:className "leaf-chat"}
         (apply dom/ul #js {:className "virt-list"}
           (om/build-all
             (fn [message owner]
               (reify
                 om/IRender
                 (render [_] (dom/li nil message))))
-            (:messages channel)))
+            (:messages chat)))
         (dom/form
           #js {:onSubmit
                (fn [e]
@@ -67,16 +67,16 @@
                        msg (.-value message-input)]
                    (if-not (empty? msg)
                      (do
-                       #_(om/transact! channel :messages
+                       #_(om/transact! chat :messages
                                        #(conj % msg))
                        (put! (om/get-state owner :comm) [:send-message msg])
                        (set! (.-value message-input) "")))))}
           (dom/input #js {:ref "message-input"}))))))
 
-(defn branch-channel [app owner]
+(defn branch-chat [app owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [comm channel]}]
+    (render-state [_ {:keys [comm chat]}]
       (apply dom/ul #js {:className "virt-list"}
         (om/build-all
           (fn [id-item owner]
@@ -87,20 +87,20 @@
                       item (second id-item)]
                   (dom/li #js {:onClick (fn [e] (put! comm [:navigate id]))}
                            (:title item))))))
-          (select-keys (:channels app) (:children channel)))))))
+          (select-keys (:chats app) (:children chat)))))))
 
-(defn new-channel [app owner]
+(defn new-chat [app owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/form #js {:className "new-channel"}
-        (dom/input #js {:ref "new-channel-input" :placeholder "Title" :autoFocus true})
+      (dom/form #js {:className "new-chat"}
+        (dom/input #js {:ref "new-chat-input" :placeholder "Title" :autoFocus true})
         (dom/button
           #js {:className "transparent-button"
                :onClick (fn [e]
                           (.preventDefault e)
-                          (put! comm [:new-channel
-                                      (.-value (om/get-node owner "new-channel-input"))]))}
+                          (put! comm [:new-chat
+                                      (.-value (om/get-node owner "new-chat-input"))]))}
           "Create")))))
 
 
@@ -112,8 +112,8 @@
        :page-stack []})
     om/IWillMount
     (will-mount [_]
-      (let [cosm-id (om/get-shared owner :cosm-id)]
-        (go (let [response (<! (http/get (str "/api/chat/" cosm-id)))]
+      (let [channel-id (om/get-shared owner :channel-id)]
+        (go (let [response (<! (http/get (str "/api/chat/" channel-id)))]
               (om/update! app (:body response))))
         (let [comm (om/get-state owner :comm)]
           (go (while true
@@ -121,12 +121,12 @@
                   (case msg
                     :navigate
                     (om/update-state! owner :page-stack #(conj % value))
-                    :new-channel
+                    :new-chat
                     (let [response
                           (<! (http/post "/api/chats"
                                          {:edn-params {:name value
-                                                       :cosm-id cosm-id
-                                                       :channel-id (last (butlast (om/get-state owner :page-stack)))}}))]
+                                                       :channel-id channel-id
+                                                       :chat-id (last (butlast (om/get-state owner :page-stack)))}}))]
                       (om/update! app (:body response))
                       (om/update-state! owner :page-stack #(butlast %)))
                     nil)))))))
@@ -139,14 +139,14 @@
           (let [page-id (last page-stack)
                 m {:init-state {:comm comm}}]
             (case page-id
-              :new (om/build new-channel app m)
-              (let [cur-channel (get (:channels app)
-                                     (or page-id (:root-channel app)))]
-                (case (:node-type cur-channel)
-                  :branch (om/build branch-channel app (assoc m :state {:channel cur-channel}))
-                  :leaf (om/build leaf-channel cur-channel (assoc m :opts {:channel-id page-id}))
+              :new (om/build new-chat app m)
+              (let [cur-chat (get (:chats app)
+                                  (or page-id (:root-chat app)))]
+                (case (:node-type cur-chat)
+                  :branch (om/build branch-chat app (assoc m :state {:chat cur-chat}))
+                  :leaf (om/build leaf-chat cur-chat (assoc m :opts {:chat-id page-id}))
                   nil)))))))))
 
 (om/root main app-state
          {:target (.getElementById js/document "app")
-          :shared {:cosm-id (cljs.reader/read-string (virt.utils/parse-url-param "id"))}})
+          :shared {:channel-id (cljs.reader/read-string (virt.utils/parse-url-param "id"))}})

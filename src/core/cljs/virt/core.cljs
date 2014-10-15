@@ -18,8 +18,8 @@
   (do
     (defroute "/" []
       :home)
-    (defroute "/:cosm-id" [cosm-id]
-      (cljs.reader/read-string cosm-id))
+    (defroute "/:channel-id" [channel-id]
+      (cljs.reader/read-string channel-id))
     (fn [path]
       (secretary/dispatch! path))))
 
@@ -58,19 +58,19 @@
           (dom/div #js {:className "title"} (:title item))
           (dom/div #js {:className "aux"} "Test"))))))
 
-(defn cosm-list [app owner]
+(defn channel-list [app owner]
   (reify
     om/IWillMount
     (will-mount [_]
       (go
-        (let [response (<! (http/get "/api/cosms"))
+        (let [response (<! (http/get "/api/channels"))
               body (:body response)]
           (om/update! app body))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/div #js {:id "cosm-content"}
+      (dom/div #js {:id "channel-content"}
         (apply dom/ul #js {:className "virt-list"}
-          (om/build-all list-item (:cosms app) {:init-state {:comm comm}}))))))
+          (om/build-all list-item (:channels app) {:init-state {:comm comm}}))))))
 
 (defn main [app owner]
   (reify
@@ -84,8 +84,8 @@
               (let [[msg data] (<! comm)]
                 (case msg
                   :set-app
-                  (let [cosm-link (:link ((:app data) (:apps @app-state)))]
-                    (set! (.-location js/window) (str cosm-link "?id=" (:id data))))
+                  (let [channel-link (:link ((:app data) (:apps @app-state)))]
+                    (set! (.-location js/window) (str channel-link "?id=" (:id data))))
                   nil))))
         (set-up-history comm)))
     om/IRenderState
@@ -94,6 +94,6 @@
         (dom/div #js {:id "header"}
           (om/build header app {:init-state {:comm comm}}))
         (dom/div #js {:id "content"}
-          (om/build cosm-list app {:init-state {:comm comm}}))))))
+          (om/build channel-list app {:init-state {:comm comm}}))))))
 
 (om/root main app-state {:target (.getElementById js/document "app")})
