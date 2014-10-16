@@ -13,7 +13,7 @@
 (defn header [app owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [comm]}]
+    (render-state [_ {:keys [comm show-new-button]}]
       (dom/header nil
         (dom/div nil
           (dom/button #js {:id "home-button"
@@ -23,10 +23,11 @@
         (dom/div nil
           (dom/div #js {:id "header-title"} "Chat"))
         (dom/div nil
-          (dom/button #js {:id "new-button"
-                           :className "transparent-button"
-                           :onClick #(put! comm [:navigate :new])}
-                      "New"))))))
+          (if show-new-button
+            (dom/button #js {:id "new-button"
+                             :className "transparent-button"
+                             :onClick #(put! comm [:navigate :new])}
+                        "New")))))))
 
 (defn leaf-chat [chat owner {:keys [chat-id]}]
   (reify
@@ -131,11 +132,11 @@
                     nil)))))))
     om/IRenderState
     (render-state [_ {:keys [comm page-id]}]
-      (dom/div nil
-        (dom/div #js {:id "header"}
-          (om/build header app {:init-state {:comm comm}}))
-        (dom/div #js {:id "content"}
-          (let [m {:init-state {:comm comm}}]
+      (let [m {:init-state {:comm comm}}]
+        (dom/div nil
+          (dom/div #js {:id "header"}
+            (om/build header app (assoc m :state {:show-new-button (= page-id nil)})))
+          (dom/div #js {:id "content"}
             (case page-id
               :new (om/build new-chat app m)
               nil (om/build chat-root app m)
