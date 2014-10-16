@@ -73,10 +73,10 @@
                        (set! (.-value message-input) "")))))}
           (dom/input #js {:ref "message-input"}))))))
 
-(defn branch-chat [app owner]
+(defn chat-root [app owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [comm chat]}]
+    (render-state [_ {:keys [comm]}]
       (apply dom/ul #js {:className "virt-list"}
         (om/build-all
           (fn [id-item owner]
@@ -86,8 +86,8 @@
                 (let [id (first id-item)
                       item (second id-item)]
                   (dom/li #js {:onClick (fn [e] (put! comm [:navigate id]))}
-                           (:title item))))))
-          (select-keys (:chats app) (:children chat)))))))
+                          (:title item))))))
+          app)))))
 
 (defn new-chat [app owner]
   (reify
@@ -109,7 +109,7 @@
     om/IInitState
     (init-state [_]
       {:comm (chan)
-       :page-stack []})
+       :page-id nil})
     om/IWillMount
     (will-mount [_]
       (let [channel-id (om/get-shared owner :channel-id)]
@@ -120,32 +120,28 @@
                 (let [[msg value] (<! comm)]
                   (case msg
                     :navigate
-                    (om/update-state! owner :page-stack #(conj % value))
+                    (om/set-state! owner :page-id value)
                     :new-chat
                     (let [response
                           (<! (http/post "/api/chats"
                                          {:edn-params {:name value
-                                                       :channel-id channel-id
-                                                       :chat-id (last (butlast (om/get-state owner :page-stack)))}}))]
+                                                       :channel-id channel-id}}))]
                       (om/update! app (:body response))
-                      (om/update-state! owner :page-stack #(butlast %)))
+                      (om/set-state! owner :page-id nil))
                     nil)))))))
     om/IRenderState
-    (render-state [_ {:keys [comm page-stack]}]
+    (render-state [_ {:keys [comm page-id]}]
       (dom/div nil
         (dom/div #js {:id "header"}
           (om/build header app {:init-state {:comm comm}}))
         (dom/div #js {:id "content"}
-          (let [page-id (last page-stack)
-                m {:init-state {:comm comm}}]
+          (let [m {:init-state {:comm comm}}]
             (case page-id
               :new (om/build new-chat app m)
-              (let [cur-chat (get (:chats app)
-                                  (or page-id (:root-chat app)))]
-                (case (:node-type cur-chat)
-                  :branch (om/build branch-chat app (assoc m :state {:chat cur-chat}))
-                  :leaf (om/build leaf-chat cur-chat (assoc m :opts {:chat-id page-id}))
-                  nil)))))))))
+              nil (om/build chat-root app m)
+              (om/build leaf-chat
+                        (get app page-id)
+                        (assoc m :opts {:chat-id page-id})))))))))
 
 (om/root main app-state
          {:target (.getElementById js/document "app")
