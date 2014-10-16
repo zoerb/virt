@@ -29,6 +29,20 @@
                              :onClick #(put! comm [:navigate :new])}
                         "New")))))))
 
+(defn footer [app owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [comm show-back-button]}]
+      (dom/footer nil
+        (dom/div nil
+          (if show-back-button
+            (dom/button #js {:id "back-button"
+                             :className "transparent-button"
+                             :onClick #(put! comm [:navigate nil])}
+                        "Back")))
+        (dom/div nil)
+        (dom/div nil)))))
+
 (defn leaf-chat [chat owner {:keys [chat-id]}]
   (reify
     om/IWillMount
@@ -142,7 +156,9 @@
               nil (om/build chat-root app m)
               (om/build leaf-chat
                         (get app page-id)
-                        (assoc m :opts {:chat-id page-id})))))))))
+                        (assoc m :opts {:chat-id page-id}))))
+          (dom/div #js {:id "footer"}
+            (om/build footer app (assoc m :state {:show-back-button (not= page-id nil)}))))))))
 
 (om/root main app-state
          {:target (.getElementById js/document "app")

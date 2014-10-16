@@ -7,40 +7,60 @@ body {
   background-color: #f8f8f8;
 }
 
-header {
+header, footer {
   position: fixed;
   box-sizing: border-box;
-  height: 52px;
-  top: 0; left: 0; right: 0;
+  left: 0; right: 0;
   display: flex;
   display: -webkit-flex;
   justify-content: space-between;
   -webkit-justify-content: space-between;
   align-items: center;
   -webkit-align-items: center;
-  background: linear-gradient(0, #f4f4f4, #e8e8e8);
   padding: 8px;
   font-weight: bold;
 }
 
-header > * {
-}
-
-header > *:first-child {
+header > *:first-child, footer > *:first-child {
   text-align: left;
   margin-right: 10px;
-  width: 57px;
 }
 
-header > *:nth-child(2) {
+header > *:nth-child(2), footer > *:nth-child(2) {
   flex-grow: 1;
   -webkit-flex-grow: 1;
   text-align: center;
 }
 
-header > *:last-child {
+header > *:last-child, footer > *:last-child {
   text-align: right;
   margin-left: 10px;
+}
+
+header {
+  height: 52px;
+  top: 0;
+  background: linear-gradient(0, #f4f4f4, #e8e8e8);
+}
+
+header > *:first-child, header > *:last-child {
+  width: 57px;
+}
+
+#header-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 20px;
+}
+
+footer {
+  height: 52px;
+  bottom: 0;
+  background: linear-gradient(0, #e8e8e8, #f4f4f4);
+}
+
+footer > *:first-child, footer > *:last-child {
   width: 57px;
 }
 
@@ -53,6 +73,7 @@ header > *:last-child {
 
 #content {
   margin-top: 52px;
+  margin-bottom: 52px;
 }
 
 .transparent-button {
@@ -120,6 +141,10 @@ input {
 
 .virt-list > li, header {
   border-bottom: 1px solid #e0e0e0;
+}
+
+footer {
+  border-top: 1px solid #e0e0e0;
 }
 
 .virt-list > li .title {
