@@ -18,10 +18,10 @@
     (render-state [_ {:keys [comm show-new-button]}]
       (dom/header nil
         (dom/div nil
-          (dom/button #js {:id "home-button"
+          (dom/button #js {:id "back-button"
                            :className "transparent-button"
-                           :onClick #(set! (.-location js/window) "/")}
-                      "Home"))
+                           :onClick #(put! comm [:navigate :back])}
+                      "Back"))
         (dom/div nil
           (dom/div #js {:id "header-title"} "Chat"))
         (dom/div nil
@@ -30,20 +30,6 @@
                              :className "transparent-button"
                              :onClick #(put! comm [:navigate :new])}
                         "New")))))))
-
-(defn footer [app owner]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [comm show-back-button]}]
-      (dom/footer nil
-        (dom/div nil
-          (if show-back-button
-            (dom/button #js {:id "back-button"
-                             :className "transparent-button"
-                             :onClick #(put! comm [:navigate nil])}
-                        "Back")))
-        (dom/div nil)
-        (dom/div nil)))))
 
 (defn leaf-chat [messages owner {:keys [thread-id]}]
   (reify
@@ -135,13 +121,16 @@
                 (let [[msg value] (<! comm)]
                   (case msg
                     :navigate
-                    (do
-                      (if-not (contains? #{nil :new} value)
-                        (do
-                          (om/update! app [:messages value] [])))
-                          (go (let [response (<! (http/get (str "/api/chat/messages/" value)))]
-                                (om/update! app [:messages value] (:body response))))
-                      (om/set-state! owner :page-id value))
+                    (case value
+                      :new (om/set-state! owner :page-id value)
+                      :back (if (= (om/get-state owner :page-id) nil)
+                              (set! (.-location js/window) "/")
+                              (om/set-state! owner :page-id nil))
+                      (do
+                        (om/update! app [:messages value] [])
+                        (go (let [response (<! (http/get (str "/api/chat/messages/" value)))]
+                              (om/update! app [:messages value] (:body response))))
+                        (om/set-state! owner :page-id value)))
                     :new-thread
                     (let [response
                           (<! (http/post "/api/chat/threads"
@@ -162,9 +151,7 @@
               nil (om/build chat-root (:threads app) m)
               (om/build leaf-chat
                         (get (:messages app) page-id)
-                        (assoc m :opts {:thread-id page-id}))))
-          (dom/div #js {:id "footer"}
-            (om/build footer app (assoc m :state {:show-back-button (not= page-id nil)}))))))))
+                        (assoc m :opts {:thread-id page-id})))))))))
 
 (om/root main app-state
          {:target (.getElementById js/document "app")
