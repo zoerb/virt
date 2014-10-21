@@ -7,7 +7,9 @@
             virt.utils))
 
 
-(def app-state (atom {}))
+(def app-state
+  (atom {:threads {}
+         :messages {}}))
 
 
 (defn header [app owner]
@@ -43,17 +45,16 @@
         (dom/div nil)
         (dom/div nil)))))
 
-(defn leaf-chat [chat owner {:keys [chat-id]}]
+(defn leaf-chat [messages owner {:keys [thread-id]}]
   (reify
     om/IWillMount
     (will-mount [_]
-      (let [wsUri (str "ws://" window.location.host (str "/api/chat/" (om/get-shared owner :channel-id) "/" chat-id))
+      (let [wsUri (str "ws://" window.location.host (str "/api/chat/ws/" thread-id))
             ws (js/WebSocket. wsUri)
             comm (chan)]
         (set! (.-onmessage ws)
           (fn [e]
-            ;(om/update! chat :messages (cljs.reader/read-string (.-data e)))
-            (om/transact! chat :messages #(conj % (.-data e)))))
+            (om/transact! messages #(conj % (.-data e)))))
         (om/set-state! owner :comm comm)
         (go (while true
               (let [[msg value] (<! comm)]
@@ -73,7 +74,7 @@
               (reify
                 om/IRender
                 (render [_] (dom/li nil message))))
-            (:messages chat)))
+            messages))
         (dom/form
           #js {:onSubmit
                (fn [e]
@@ -82,13 +83,12 @@
                        msg (.-value message-input)]
                    (if-not (empty? msg)
                      (do
-                       #_(om/transact! chat :messages
-                                       #(conj % msg))
+                       #_(om/transact! messages #(conj % msg))
                        (put! (om/get-state owner :comm) [:send-message msg])
                        (set! (.-value message-input) "")))))}
           (dom/input #js {:ref "message-input"}))))))
 
-(defn chat-root [app owner]
+(defn chat-root [threads owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
@@ -102,20 +102,20 @@
                       item (second id-item)]
                   (dom/li #js {:onClick (fn [e] (put! comm [:navigate id]))}
                           (:title item))))))
-          app)))))
+          threads)))))
 
-(defn new-chat [app owner]
+(defn new-thread [threads owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/form #js {:className "new-chat"}
-        (dom/input #js {:ref "new-chat-input" :placeholder "Title" :autoFocus true})
+      (dom/form #js {:className "new-thread"}
+        (dom/input #js {:ref "new-thread-input" :placeholder "Title" :autoFocus true})
         (dom/button
           #js {:className "transparent-button"
                :onClick (fn [e]
                           (.preventDefault e)
-                          (put! comm [:new-chat
-                                      (.-value (om/get-node owner "new-chat-input"))]))}
+                          (put! comm [:new-thread
+                                      (.-value (om/get-node owner "new-thread-input"))]))}
           "Create")))))
 
 
@@ -128,20 +128,26 @@
     om/IWillMount
     (will-mount [_]
       (let [channel-id (om/get-shared owner :channel-id)]
-        (go (let [response (<! (http/get (str "/api/chat/" channel-id)))]
-              (om/update! app (:body response))))
+        (go (let [response (<! (http/get (str "/api/chat/threads/" channel-id)))]
+              (om/update! app [:threads] (:body response))))
         (let [comm (om/get-state owner :comm)]
           (go (while true
                 (let [[msg value] (<! comm)]
                   (case msg
                     :navigate
-                    (om/set-state! owner :page-id value)
-                    :new-chat
+                    (do
+                      (if-not (contains? #{nil :new} value)
+                        (do
+                          (om/update! app [:messages value] [])))
+                          (go (let [response (<! (http/get (str "/api/chat/messages/" value)))]
+                                (om/update! app [:messages value] (:body response))))
+                      (om/set-state! owner :page-id value))
+                    :new-thread
                     (let [response
-                          (<! (http/post "/api/chats"
-                                         {:edn-params {:name value
-                                                       :channel-id channel-id}}))]
-                      (om/update! app (:body response))
+                          (<! (http/post "/api/chat/threads"
+                                         {:edn-params {:channel-id channel-id
+                                                       :thread-name value}}))]
+                      (om/update! app [:threads] (:body response))
                       (om/set-state! owner :page-id nil))
                     nil)))))))
     om/IRenderState
@@ -152,11 +158,11 @@
             (om/build header app (assoc m :state {:show-new-button (= page-id nil)})))
           (dom/div #js {:id "content"}
             (case page-id
-              :new (om/build new-chat app m)
-              nil (om/build chat-root app m)
+              :new (om/build new-thread (:threads app) m)
+              nil (om/build chat-root (:threads app) m)
               (om/build leaf-chat
-                        (get app page-id)
-                        (assoc m :opts {:chat-id page-id}))))
+                        (get (:messages app) page-id)
+                        (assoc m :opts {:thread-id page-id}))))
           (dom/div #js {:id "footer"}
             (om/build footer app (assoc m :state {:show-back-button (not= page-id nil)}))))))))
 

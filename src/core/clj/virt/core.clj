@@ -9,22 +9,30 @@
 
 
 (def channels
-  (atom {:channels {0x001 {:title "Channel 1"
-                           :app :chat}
-                    0x002 {:title "Channel 2"
-                           :app :chat}
-                    0x003 {:title "Channel 3"
-                           :app :chat}}
-         :apps {:chat {:link "/chat.html"}}}))
+  (ref {:channels {0x001 {:title "Channel 1"
+                          :app :chat}
+                   0x002 {:title "Channel 2"
+                          :app :chat}
+                   0x003 {:title "Channel 3"
+                          :app :chat}}
+        :apps {:chat {:link "/chat.html"}}}))
 
-(def chats
-  {0x001 (atom {0x001 {:title "hi" :messages ["test"]}
-                0x002 {:title "hi1" :messages ["1" "2" "3"]}
-                0x003 {:title "how's it goin" :messages []}})
-   0x002 (atom {0x008 {:title "one" :messages []}
-                0x009 {:title "another one!" :messages []}
-                0x00A {:title "another nother one!" :messages ["works?" "works."]}})
-   0x003 (atom {})})
+(def chat-threads
+  (ref {0x001 {0x001 {:title "hi"}
+               0x002 {:title "hi1"}
+               0x003 {:title "how's it goin"}}
+        0x002 {0x008 {:title "one"}
+               0x009 {:title "another one!"}
+               0x00A {:title "another nother one!"}}
+        0x003 {}}))
+
+(def chat-messages
+  (ref {0x001 ["test"]
+        0x002 ["1" "2" "3"]
+        0x003 []
+        0x008 []
+        0x009 []
+        0x00A ["works?" "works."]}))
 
 (def next-id
   (let [id (atom 0x00B)]
@@ -35,47 +43,61 @@
    :headers {"Content-Type" "application/edn"}
    :body (pr-str @channels)})
 
-(defn chats-handler [request]
+(defn chat-threads-handler [request]
   (let [params (:route-params request)
-        id (read-string (:id params))]
+        channel-id (read-string (:channel-id params))]
     {:status 200
      :headers {"Content-Type" "application/edn"}
-     :body (pr-str @(get chats id))}))
+     :body (pr-str (get @chat-threads channel-id))}))
 
-(defn new-chat [channel-id chat-name]
+(defn chat-messages-handler [request]
+  (let [params (:route-params request)
+        thread-id (read-string (:thread-id params))]
+    {:status 200
+     :headers {"Content-Type" "application/edn"}
+     :body (pr-str (get @chat-messages thread-id))}))
+
+(defn new-chat-thread [channel-id thread-name]
   (let [new-id (next-id)]
-    (swap! (get chats channel-id)
-           #(conj % {new-id {:title chat-name :messages []}})))
+    (dosync
+      (alter chat-threads
+        (fn [threads]
+          (update-in threads [channel-id]
+            #(conj % {new-id {:title thread-name}}))))
+      (alter chat-messages
+        #(conj % {new-id []}))))
   {:status 200
    :headers {"Content-Type" "application/edn"}
-   :body (pr-str @(get chats channel-id))})
+   :body (pr-str (get @chat-threads channel-id))})
 
-(defn new-chat-handler [request]
+(defn new-chat-thread-handler [request]
   (let [body (read-string (slurp (:body request)))]
-    (new-chat (:channel-id body) (:name body))))
+    (new-chat-thread (:channel-id body) (:thread-name body))))
 
-(defn add-msg [channel-id chat-id msg]
-  (swap! (get chats channel-id)
-         (fn [c] (update-in c [chat-id :messages]
-                   #(conj % msg)))))
+(defn add-msg [thread-id msg]
+  (dosync
+    (alter chat-messages
+      (fn [msgs]
+        (update-in msgs [thread-id]
+          #(conj % msg))))))
 
-(defn chat-handler [ch request]
+(defn chat-thread-ws-handler [ch request]
   (let [params (:route-params request)
-        channel-id (Integer/parseInt (:channel-id params))
-        chat-id (Integer/parseInt (:chat-id params))
+        thread-id (Integer/parseInt (:thread-id params))
         chat (named-channel
-               (str channel-id "/" chat-id)
-               (fn [new-ch] (receive-all new-ch #(add-msg channel-id chat-id %))))]
+               (str thread-id)
+               (fn [new-ch] (receive-all new-ch #(add-msg thread-id %))))]
     (siphon chat ch)
     (siphon ch chat)))
 
 (defroutes app-routes
   (route/resources "/")
   (GET "/api/channels" [] channels-handler)
-  (POST "/api/chats" [] new-chat-handler)
-  (GET "/api/chat/:id" [] chats-handler)
-  (GET ["/api/chat/:channel-id/:chat-id", :channel-id #"[0-9A-Za-z]+", :chat-id #"[0-9A-Za-z]+"] {}
-       (wrap-aleph-handler chat-handler))
+  (GET "/api/chat/threads/:channel-id" [] chat-threads-handler)
+  (POST "/api/chat/threads" [] new-chat-thread-handler)
+  (GET "/api/chat/messages/:thread-id" [] chat-messages-handler)
+  (GET ["/api/chat/ws/:thread-id", :thread-id #"[0-9A-Za-z]+"] {}
+       (wrap-aleph-handler chat-thread-ws-handler))
   (GET "/*" {:keys [uri]} (resp/resource-response "index.html" {:root "public"}))
   (route/not-found "Page not found"))
 

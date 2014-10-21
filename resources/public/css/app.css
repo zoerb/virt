@@ -101,16 +101,16 @@ input {
   font-family: inherit;
 }
 
-.new-chat {
+.new-thread {
   width: 100%;
   text-align: center;
   padding: 40px 0;
 }
-.new-chat input {
+.new-thread input {
   width: 90%;
   padding: 6px;
 }
-.new-chat button {
+.new-thread button {
   display: block;
   margin: 15px auto;
 }
