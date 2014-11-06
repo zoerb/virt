@@ -44,7 +44,8 @@
           (dom/div #js {:id "header-title"} "Virt"))
         (dom/div nil
           (dom/button #js {:id "new-button"
-                           :className "transparent-button"}
+                           :className "transparent-button"
+                           :onClick #(put! comm [:navigate :new])}
                       "New"))))))
 
 (defn list-item [id-item owner]
@@ -56,7 +57,7 @@
             app (:app item)]
         (dom/li #js {:onClick (fn [e] (put! comm [:set-app {:app app :id id}]))}
           (dom/div #js {:className "title"} (:title item))
-          (dom/div #js {:className "aux"} "Test"))))))
+          (dom/div #js {:className "aux"} (name app)))))))
 
 (defn channel-list [app owner]
   (reify
@@ -72,11 +73,26 @@
         (apply dom/ul #js {:className "virt-list"}
           (om/build-all list-item (:channels app) {:init-state {:comm comm}}))))))
 
+(defn new-channel [channels owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
+      (dom/form #js {:className "new-channel"}
+        (dom/input #js {:ref "new-channel-input" :placeholder "Title" :autoFocus true})
+        (dom/button
+          #js {:className "transparent-button"
+               :onClick (fn [e]
+                          (.preventDefault e)
+                          (put! comm [:new-channel
+                                      (.-value (om/get-node owner "new-channel-input"))]))}
+          "Create")))))
+
 (defn main [app owner]
   (reify
     om/IInitState
     (init-state [_]
-      {:comm (chan)})
+      {:comm (chan)
+       :page-id nil})
     om/IWillMount
     (will-mount [_]
       (let [comm (om/get-state owner :comm)]
@@ -86,14 +102,27 @@
                   :set-app
                   (let [channel-link (:link ((:app data) (:apps @app-state)))]
                     (set! (.-location js/window) (str channel-link "?id=" (:id data))))
+                  :navigate
+                  (case data
+                    :new (om/set-state! owner :page-id data)
+                    :back (om/set-state! owner :page-id nil))
+                  :new-channel
+                  (let [response
+                        (<! (http/post "/api/channels"
+                                       {:edn-params {:channel-name data}}))]
+                    (om/update! app (:body response))
+                    (om/set-state! owner :page-id nil))
                   nil))))
         (set-up-history comm)))
     om/IRenderState
-    (render-state [_ {:keys [comm]}]
-      (dom/div nil
-        (dom/div #js {:id "header"}
-          (om/build header app {:init-state {:comm comm}}))
-        (dom/div #js {:id "content"}
-          (om/build channel-list app {:init-state {:comm comm}}))))))
+    (render-state [_ {:keys [comm page-id]}]
+      (let [m {:init-state {:comm comm}}]
+        (dom/div nil
+          (dom/div #js {:id "header"}
+            (om/build header app m))
+          (dom/div #js {:id "content"}
+            (case page-id
+              :new (om/build new-channel app m)
+              nil (om/build channel-list app m))))))))
 
 (om/root main app-state {:target (.getElementById js/document "app")})

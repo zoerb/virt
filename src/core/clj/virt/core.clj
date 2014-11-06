@@ -43,6 +43,24 @@
    :headers {"Content-Type" "application/edn"}
    :body (pr-str @channels)})
 
+(defn new-channel [channel-name]
+  (let [new-id (next-id)]
+    (dosync
+      (alter channels
+        (fn [chs]
+          (update-in chs [:channels]
+            #(conj % {new-id {:title channel-name
+                              :app :chat}}))))
+      (alter chat-threads
+        #(conj % {new-id {}}))))
+  {:status 200
+   :headers {"Content-Type" "application/edn"}
+   :body (pr-str @channels)})
+
+(defn new-channel-handler [request]
+  (let [body (read-string (slurp (:body request)))]
+    (new-channel (:channel-name body))))
+
 (defn chat-threads-handler [request]
   (let [params (:route-params request)
         channel-id (read-string (:channel-id params))]
@@ -93,6 +111,7 @@
 (defroutes app-routes
   (route/resources "/")
   (GET "/api/channels" [] channels-handler)
+  (POST "/api/channels" [] new-channel-handler)
   (GET "/api/chat/threads/:channel-id" [] chat-threads-handler)
   (POST "/api/chat/threads" [] new-chat-thread-handler)
   (GET "/api/chat/messages/:thread-id" [] chat-messages-handler)

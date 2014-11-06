@@ -89,16 +89,16 @@ input {
   font-family: inherit;
 }
 
-.new-thread {
+.new-thread, .new-channel {
   width: 100%;
   text-align: center;
   padding: 40px 0;
 }
-.new-thread input {
+.new-thread input, .new-channel input {
   width: 90%;
   padding: 6px;
 }
-.new-thread button {
+.new-thread button, .new-channel button {
   display: block;
   margin: 15px auto;
 }
