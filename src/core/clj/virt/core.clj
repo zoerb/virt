@@ -38,10 +38,13 @@
   (let [id (atom 0x00B)]
     (fn [] (swap! id #(inc %)))))
 
-(defn channels-handler [request]
+(defn edn-response [body]
   {:status 200
    :headers {"Content-Type" "application/edn"}
-   :body (pr-str @channels)})
+   :body (pr-str body)})
+
+(defn channels-handler [request]
+  (edn-response @channels))
 
 (defn new-channel [channel-name]
   (let [new-id (next-id)]
@@ -53,9 +56,7 @@
                               :app :chat}}))))
       (alter chat-threads
         #(conj % {new-id {}}))))
-  {:status 200
-   :headers {"Content-Type" "application/edn"}
-   :body (pr-str @channels)})
+  (edn-response @channels))
 
 (defn new-channel-handler [request]
   (let [body (read-string (slurp (:body request)))]
@@ -64,16 +65,12 @@
 (defn chat-threads-handler [request]
   (let [params (:route-params request)
         channel-id (read-string (:channel-id params))]
-    {:status 200
-     :headers {"Content-Type" "application/edn"}
-     :body (pr-str (get @chat-threads channel-id))}))
+    (edn-response (get @chat-threads channel-id))))
 
 (defn chat-messages-handler [request]
   (let [params (:route-params request)
         thread-id (read-string (:thread-id params))]
-    {:status 200
-     :headers {"Content-Type" "application/edn"}
-     :body (pr-str (get @chat-messages thread-id))}))
+    (edn-response (get @chat-messages thread-id))))
 
 (defn new-chat-thread [channel-id thread-name]
   (let [new-id (next-id)]
@@ -84,9 +81,7 @@
             #(conj % {new-id {:title thread-name}}))))
       (alter chat-messages
         #(conj % {new-id []}))))
-  {:status 200
-   :headers {"Content-Type" "application/edn"}
-   :body (pr-str (get @chat-threads channel-id))})
+  (edn-response (get @chat-threads channel-id)))
 
 (defn new-chat-thread-handler [request]
   (let [body (read-string (slurp (:body request)))]
