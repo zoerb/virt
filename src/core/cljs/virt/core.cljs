@@ -12,7 +12,9 @@
            [goog.history EventType]))
 
 
-(def app-state (atom {}))
+(def app-state
+  (atom {:apps {}
+         :channels {}}))
 
 (def parse-path
   (do
@@ -66,7 +68,7 @@
       (go
         (let [response (<! (http/get "/api/channels"))
               body (:body response)]
-          (om/update! app body))))
+          (om/update! app [:channels] body))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div #js {:id "channel-content"}
@@ -96,7 +98,11 @@
     om/IWillMount
     (will-mount [_]
       (let [comm (om/get-state owner :comm)]
-        (go (while true
+        (go
+          (let [response (<! (http/get "/api/apps"))
+                body (:body response)]
+            (om/update! app [:apps] body))
+          (while true
               (let [[msg data] (<! comm)]
                 (case msg
                   :set-app
@@ -110,7 +116,7 @@
                   (let [response
                         (<! (http/post "/api/channels"
                                        {:edn-params {:channel-name data}}))]
-                    (om/update! app (:body response))
+                    (om/update! app [:channels] (:body response))
                     (om/set-state! owner :page-id nil))
                   nil))))
         (set-up-history comm)))

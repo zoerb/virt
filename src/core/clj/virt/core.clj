@@ -8,14 +8,16 @@
             [lamina.core :refer :all]))
 
 
+(def apps
+  (ref {:chat {:link "/chat.html"}}))
+
 (def channels
-  (ref {:channels {0x001 {:name "Channel 1"
-                          :app :chat}
-                   0x002 {:name "Channel 2"
-                          :app :chat}
-                   0x003 {:name "Channel 3"
-                          :app :chat}}
-        :apps {:chat {:link "/chat.html"}}}))
+  (ref {0x001 {:name "Channel 1"
+               :app :chat}
+        0x002 {:name "Channel 2"
+               :app :chat}
+        0x003 {:name "Channel 3"
+               :app :chat}}))
 
 (def chat-threads
   (ref {0x001 {0x001 {:title "hi"}
@@ -43,6 +45,9 @@
    :headers {"Content-Type" "application/edn"}
    :body (pr-str body)})
 
+(defn apps-handler [request]
+  (edn-response @apps))
+
 (defn channels-handler [request]
   (edn-response @channels))
 
@@ -50,10 +55,8 @@
   (let [new-id (next-id)]
     (dosync
       (alter channels
-        (fn [chs]
-          (update-in chs [:channels]
-            #(conj % {new-id {:name channel-name
-                              :app :chat}}))))
+        #(conj % {new-id {:name channel-name
+                          :app :chat}}))
       (alter chat-threads
         #(conj % {new-id {}}))))
   (edn-response @channels))
@@ -105,6 +108,7 @@
 
 (defroutes app-routes
   (route/resources "/")
+  (GET "/api/apps" [] apps-handler)
   (GET "/api/channels" [] channels-handler)
   (POST "/api/channels" [] new-channel-handler)
   (GET "/api/chat/threads/:channel-id" [] chat-threads-handler)
