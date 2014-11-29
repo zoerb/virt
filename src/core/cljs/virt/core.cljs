@@ -56,7 +56,7 @@
             item (second id-item)
             app (:app item)]
         (dom/li #js {:onClick (fn [e] (put! comm [:set-app {:app app :id id}]))}
-          (dom/div #js {:className "title"} (:title item))
+          (dom/div #js {:className "name"} (:name item))
           (dom/div #js {:className "aux"} (name app)))))))
 
 (defn channel-list [app owner]

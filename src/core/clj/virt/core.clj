@@ -9,11 +9,11 @@
 
 
 (def channels
-  (ref {:channels {0x001 {:title "Channel 1"
+  (ref {:channels {0x001 {:name "Channel 1"
                           :app :chat}
-                   0x002 {:title "Channel 2"
+                   0x002 {:name "Channel 2"
                           :app :chat}
-                   0x003 {:title "Channel 3"
+                   0x003 {:name "Channel 3"
                           :app :chat}}
         :apps {:chat {:link "/chat.html"}}}))
 
@@ -49,7 +49,7 @@
       (alter channels
         (fn [chs]
           (update-in chs [:channels]
-            #(conj % {new-id {:title channel-name
+            #(conj % {new-id {:name channel-name
                               :app :chat}}))))
       (alter chat-threads
         #(conj % {new-id {}}))))
