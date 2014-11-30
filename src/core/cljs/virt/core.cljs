@@ -50,16 +50,13 @@
                            :onClick #(put! comm [:navigate :new])}
                       "New"))))))
 
-(defn list-item [id-item owner]
+(defn list-item [channel owner]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (let [id (first id-item)
-            item (second id-item)
-            app (:app item)]
-        (dom/li #js {:onClick (fn [e] (put! comm [:set-app {:app app :id id}]))}
-          (dom/div #js {:className "name"} (:name item))
-          (dom/div #js {:className "aux"} (name app)))))))
+      (dom/li #js {:onClick (fn [e] (put! comm [:set-channel channel]))}
+        (dom/div #js {:className "name"} (:name channel))
+        (dom/div #js {:className "aux"} (name (:app channel)))))))
 
 (defn channel-list [app owner]
   (reify
@@ -68,12 +65,12 @@
       (go
         (let [response (<! (http/get "/api/channels"))
               body (:body response)]
-          (om/update! app [:channels] body))))
+          (om/update! app body))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div #js {:id "channel-content"}
         (apply dom/ul #js {:className "virt-list"}
-          (om/build-all list-item (:channels app) {:init-state {:comm comm}}))))))
+          (om/build-all list-item app {:init-state {:comm comm}}))))))
 
 (defn new-channel [channels owner]
   (reify
@@ -105,7 +102,7 @@
           (while true
               (let [[msg data] (<! comm)]
                 (case msg
-                  :set-app
+                  :set-channel
                   (let [channel-link (:link ((:app data) (:apps @app-state)))]
                     (set! (.-location js/window) (str channel-link "?id=" (:id data))))
                   :navigate
@@ -129,6 +126,6 @@
           (dom/div #js {:id "content"}
             (case page-id
               :new (om/build new-channel app m)
-              nil (om/build channel-list app m))))))))
+              nil (om/build channel-list (:channels app) m))))))))
 
 (om/root main app-state {:target (.getElementById js/document "app")})

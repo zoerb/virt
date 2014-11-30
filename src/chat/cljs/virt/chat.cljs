@@ -80,14 +80,12 @@
     (render-state [_ {:keys [comm]}]
       (apply dom/ul #js {:className "virt-list"}
         (om/build-all
-          (fn [id-item owner]
+          (fn [thread owner]
             (reify
               om/IRender
               (render [_]
-                (let [id (first id-item)
-                      item (second id-item)]
-                  (dom/li #js {:onClick (fn [e] (put! comm [:navigate id]))}
-                          (:title item))))))
+                (dom/li #js {:onClick (fn [e] (put! comm [:navigate (:id thread)]))}
+                        (:description thread)))))
           threads)))))
 
 (defn new-thread [threads owner]
@@ -128,14 +126,12 @@
                               (om/set-state! owner :page-id nil))
                       (do
                         (om/update! app [:messages value] [])
-                        (go (let [response (<! (http/get (str "/api/chat/messages/" value)))]
-                              (om/update! app [:messages value] (:body response))))
                         (om/set-state! owner :page-id value)))
                     :new-thread
                     (let [response
                           (<! (http/post "/api/chat/threads"
                                          {:edn-params {:channel-id channel-id
-                                                       :thread-name value}}))]
+                                                       :thread-descr value}}))]
                       (om/update! app [:threads] (:body response))
                       (om/set-state! owner :page-id nil))
                     nil)))))))

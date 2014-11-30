@@ -6,6 +6,8 @@
                  [org.clojure/tools.reader "0.8.2"]
                  [org.clojure/clojurescript "0.0-2277"]
                  [org.clojure/core.async "0.1.303.0-886421-alpha"]
+                 [korma "0.4.0"]
+                 [org.postgresql/postgresql "9.3-1102-jdbc4"]
                  [ring/ring-core "1.2.2"]
                  [javax.servlet/servlet-api "2.5"]
                  [compojure "1.1.8"]
