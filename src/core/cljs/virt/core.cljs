@@ -100,22 +100,22 @@
                 body (:body response)]
             (om/update! app [:apps] body))
           (while true
-              (let [[msg data] (<! comm)]
-                (case msg
-                  :set-channel
-                  (let [channel-link (:link ((:app data) (:apps @app-state)))]
-                    (set! (.-location js/window) (str channel-link "?id=" (:id data))))
-                  :navigate
-                  (case data
-                    :new (om/set-state! owner :page-id data)
-                    :back (om/set-state! owner :page-id nil))
-                  :new-channel
-                  (let [response
-                        (<! (http/post "/api/channels"
-                                       {:edn-params {:channel-name data}}))]
-                    (om/update! app [:channels] (:body response))
-                    (om/set-state! owner :page-id nil))
-                  nil))))
+            (let [[msg data] (<! comm)]
+              (case msg
+                :set-channel
+                (let [channel-link (:link ((:app data) (:apps @app-state)))]
+                  (set! (.-location js/window) (str channel-link "?id=" (:id data))))
+                :navigate
+                (case data
+                  :new (om/set-state! owner :page-id data)
+                  :back (om/set-state! owner :page-id nil))
+                :new-channel
+                (let [response
+                      (<! (http/post "/api/channels"
+                                     {:edn-params {:channel-name data}}))]
+                  (om/update! app [:channels] (:body response))
+                  (om/set-state! owner :page-id nil))
+                nil))))
         (set-up-history comm)))
     om/IRenderState
     (render-state [_ {:keys [comm page-id]}]
