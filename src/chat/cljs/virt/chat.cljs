@@ -131,7 +131,7 @@
                           (<! (http/post "/api/chat/threads"
                                          {:edn-params {:channel-id channel-id
                                                        :thread-descr value}}))]
-                      (om/update! app [:threads] (:body response))
+                      (om/transact! app [:threads] (fn [ts] (conj ts (:body response))))
                       (om/set-state! owner :page-id nil))
                     nil)))))))
     om/IRenderState

@@ -24,39 +24,39 @@
   (edn-response apps))
 
 (defn get-channels []
-  (korma/select channels
-    (korma/fields :id :name)))
+  (korma/select channels))
 
 (defn channels-handler [request]
   (edn-response (get-channels)))
 
 (defn new-channel [channel-name]
   (korma/insert channels
-    (korma/values {:name channel-name}))
-  (edn-response (get-channels)))
+    (korma/values {:name channel-name})))
 
 (defn new-channel-handler [request]
-  (let [body (read-string (slurp (:body request)))]
-    (new-channel (:channel-name body))))
+  (edn-response
+    (let [body (read-string (slurp (:body request)))]
+      (new-channel (:channel-name body)))))
 
 (defn get-threads [channel-id]
   (korma/select threads
     (korma/where {:channel_id channel-id})))
 
 (defn chat-threads-handler [request]
-  (let [params (:route-params request)
-        channel-id (read-string (:channel-id params))]
-    (edn-response (get-threads channel-id))))
+  (edn-response
+    (let [params (:route-params request)
+          channel-id (read-string (:channel-id params))]
+      (get-threads channel-id))))
 
 (defn new-chat-thread [channel-id thread-descr]
   (korma/insert threads
     (korma/values {:channel_id channel-id
-                   :description thread-descr}))
-  (edn-response (get-threads channel-id)))
+                   :description thread-descr})))
 
 (defn new-chat-thread-handler [request]
-  (let [body (read-string (slurp (:body request)))]
-    (new-chat-thread (:channel-id body) (:thread-descr body))))
+  (edn-response
+    (let [body (read-string (slurp (:body request)))]
+      (new-chat-thread (:channel-id body) (:thread-descr body)))))
 
 (defn get-messages [thread-id]
   (korma/select messages
@@ -64,9 +64,10 @@
     (korma/where {:thread_id thread-id})))
 
 (defn chat-messages-handler [request]
-  (let [params (:route-params request)
-        thread-id (read-string (:thread-id params))]
-    (edn-response (get-messages thread-id))))
+  (edn-response
+    (let [params (:route-params request)
+          thread-id (read-string (:thread-id params))]
+      (get-messages thread-id))))
 
 (defn add-msg [thread-id msg]
   (korma/insert messages
@@ -103,9 +104,14 @@
 
   (korma/defentity channels
     (korma/table :channels)
-    (korma/transform (fn [c]
-                       (assoc c :app :chat))))
-  (korma/defentity threads (korma/table :threads))
+    (korma/transform
+      (fn [cs] (-> cs
+                   (assoc :app :chat)
+                   (dissoc :location)))))
+
+  (korma/defentity threads
+    (korma/table :threads))
+
   (korma/defentity messages
     (korma/table :messages)
     (korma/transform

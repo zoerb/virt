@@ -113,7 +113,7 @@
                 (let [response
                       (<! (http/post "/api/channels"
                                      {:edn-params {:channel-name data}}))]
-                  (om/update! app [:channels] (:body response))
+                  (om/transact! app [:channels] (fn [cs] (conj cs (:body response))))
                   (om/set-state! owner :page-id nil))
                 nil))))
         (set-up-history comm)))
