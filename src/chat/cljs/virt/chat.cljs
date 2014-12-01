@@ -3,8 +3,7 @@
   (:require [cljs.core.async :refer [put! <! >! chan timeout]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [cljs-http.client :as http]
-            virt.utils))
+            [cljs-http.client :as http]))
 
 
 (def app-state
@@ -151,4 +150,9 @@
 
 (om/root main app-state
          {:target (.getElementById js/document "app")
-          :shared {:channel-id (cljs.reader/read-string (virt.utils/parse-url-param "id"))}})
+          :shared {:channel-id (-> js/window
+                                   .-location
+                                   http/parse-url
+                                   :query-params
+                                   :id
+                                   cljs.reader/read-string)}})
