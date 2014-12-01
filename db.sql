@@ -1,5 +1,3 @@
-# --- !Ups
-
 CREATE EXTENSION postgis;
 
 CREATE SEQUENCE channels_id_seq;
@@ -32,8 +30,6 @@ CREATE TABLE messages (
 );
 ALTER SEQUENCE messages_id_seq OWNED BY messages.id;
 
-# --- !Downs
-
-DROP TABLE messages;
-DROP TABLE threads;
-DROP TABLE channels;
+--DROP TABLE messages;
+--DROP TABLE threads;
+--DROP TABLE channels;
