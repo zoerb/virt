@@ -2,7 +2,10 @@
   (:require [virt.core]
             [cljs.repl.browser]
             [cemerick.piggieback]
-            [clojure.tools.namespace.repl :refer (refresh)]))
+            [clojure.tools.namespace.repl :as ctnr]))
+
+; Don't reload the user ns
+(ctnr/disable-reload!)
 
 (defn start-cljs-repl []
   (cemerick.piggieback/cljs-repl
@@ -22,4 +25,4 @@
 
 (defn reset []
   (stop)
-  (refresh :after 'user/start))
+  (ctnr/refresh :after 'user/start))
