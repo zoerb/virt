@@ -3,6 +3,7 @@
             [compojure.route :as route]
             [compojure.core :refer [GET POST defroutes]]
             [ring.util.response :as resp]
+            [ring.middleware.params :as params]
             [aleph.http :refer :all]
             [aleph.formats :refer :all]
             [lamina.core :refer :all]
@@ -23,11 +24,21 @@
 (defn apps-handler [request]
   (edn-response apps))
 
-(defn get-channels []
-  (korma/select channels))
+(defn get-channels [lon lat]
+  (korma/select channels
+    (korma/where
+      (korma/raw (str "ST_DWithin("
+                      "  location,"
+                      "  ST_GeographyFromText('SRID=4326;POINT(" lon " " lat ")'),"
+                      "  200"
+                      ")")))))
 
 (defn channels-handler [request]
-  (edn-response (get-channels)))
+  (edn-response
+    (let [params (:params request)
+          lon (read-string (get params "lon"))
+          lat (read-string (get params "lat"))]
+      (get-channels lon lat))))
 
 (defn new-channel [channel-name]
   (korma/insert channels
@@ -117,5 +128,5 @@
     (korma/transform
       (fn [m] (:message m))))
 
-  (start-http-server (wrap-ring-handler app-routes)
+  (start-http-server (wrap-ring-handler (params/wrap-params app-routes))
                      {:port 3000 :websocket true}))

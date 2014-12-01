@@ -6,7 +6,8 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
-            [cljs-http.client :as http])
+            [cljs-http.client :as http]
+            [virt.utils :as utils])
   (:import [goog History]
            [goog.history Html5History]
            [goog.history EventType]))
@@ -63,9 +64,9 @@
     om/IWillMount
     (will-mount [_]
       (go
-        (let [response (<! (http/get "/api/channels"))
-              body (:body response)]
-          (om/update! app body))))
+        (let [loc (<! (utils/get-geolocation))
+              response (<! (http/get "/api/channels" {:query-params loc}))]
+          (om/update! app (:body response)))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div #js {:id "channel-content"}
@@ -96,9 +97,8 @@
     (will-mount [_]
       (let [comm (om/get-state owner :comm)]
         (go
-          (let [response (<! (http/get "/api/apps"))
-                body (:body response)]
-            (om/update! app [:apps] body))
+          (let [response (<! (http/get "/api/apps"))]
+            (om/update! app [:apps] (:body response)))
           (while true
             (let [[msg data] (<! comm)]
               (case msg
