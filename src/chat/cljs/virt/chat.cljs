@@ -32,6 +32,9 @@
 
 (defn leaf-chat [messages owner {:keys [thread-id]}]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:should-scroll-to-bottom true})
     om/IWillMount
     (will-mount [_]
       (let [wsUri (str "ws://" window.location.host (str "/api/chat/ws/" thread-id))
@@ -50,6 +53,16 @@
     om/IWillUnmount
     (will-unmount [_]
       (go (>! (om/get-state owner :comm) [:close])))
+    om/IWillUpdate
+    (will-update [_ _ _]
+      (om/set-state-nr! owner
+                        :should-scroll-to-bottom
+                        (>= (+ (.-innerHeight js/window) (.-scrollY js/window))
+                            (.-scrollHeight (.-body js/document)))))
+    om/IDidUpdate
+    (did-update [_ _ _]
+      (if (om/get-state owner :should-scroll-to-bottom)
+        (.scrollIntoView (om/get-node owner "message-form") false)))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div #js {:className "leaf-chat"}
@@ -61,7 +74,8 @@
                 (render [_] (dom/li nil message))))
             messages))
         (dom/form
-          #js {:onSubmit
+          #js {:ref "message-form"
+               :onSubmit
                (fn [e]
                  (.preventDefault e)
                  (let [message-input (om/get-node owner "message-input")
