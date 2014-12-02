@@ -71,7 +71,6 @@
 
 (defn get-messages [thread-id]
   (korma/select messages
-    (korma/fields :message)
     (korma/where {:thread_id thread-id})))
 
 (defn chat-messages-handler [request]
