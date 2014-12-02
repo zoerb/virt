@@ -146,3 +146,8 @@ input {
 .list-link:hover, .list-link:visited, .list-link:link, .list-link:active {
   color: inherit;
 }
+
+#loading {
+  text-align: center;
+  padding-top: 26px;
+}

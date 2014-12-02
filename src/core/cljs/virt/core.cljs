@@ -63,15 +63,19 @@
   (reify
     om/IWillMount
     (will-mount [_]
+      (om/set-state! owner :show-loading true)
       (go
         (let [loc (<! (utils/get-geolocation))
               response (<! (http/get "/api/channels" {:query-params loc}))]
-          (om/update! app (:body response)))))
+          (om/update! app (:body response))
+          (om/set-state! owner :show-loading false))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/div #js {:id "channel-content"}
-        (apply dom/ul #js {:className "virt-list"}
-          (om/build-all list-item app {:init-state {:comm comm}}))))))
+      (dom/div nil
+        (if (om/get-state owner :show-loading)
+          (dom/div #js {:id "loading"} "Waiting for location...")
+          (apply dom/ul #js {:className "virt-list"}
+            (om/build-all list-item app {:init-state {:comm comm}})))))))
 
 (defn new-channel [channels owner]
   (reify
