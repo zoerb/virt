@@ -52,4 +52,5 @@
                 :preamble ["react/react.min.js"]
                 :externs ["react/externs/react.js"]
                 :closure-warnings {:non-standard-jsdoc :off}}}}}
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]})
+  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :main virt.core)
