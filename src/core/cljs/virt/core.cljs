@@ -15,7 +15,8 @@
 
 (def app-state
   (atom {:apps {}
-         :channels {}}))
+         :channels {}
+         :geolocation nil}))
 
 (def parse-path
   (do
@@ -61,21 +62,11 @@
 
 (defn channel-list [app owner]
   (reify
-    om/IWillMount
-    (will-mount [_]
-      (om/set-state! owner :show-loading true)
-      (go
-        (let [loc (<! (utils/get-geolocation))
-              response (<! (http/get "/api/channels" {:query-params loc}))]
-          (om/update! app (:body response))
-          (om/set-state! owner :show-loading false))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/div nil
-        (if (om/get-state owner :show-loading)
-          (dom/div #js {:id "loading"} "Waiting for location...")
-          (apply dom/ul #js {:className "virt-list"}
-            (om/build-all list-item app {:init-state {:comm comm}})))))))
+        (apply dom/ul #js {:className "virt-list"}
+          (om/build-all list-item app {:init-state {:comm comm}}))))))
 
 (defn new-channel [channels owner]
   (reify
@@ -96,18 +87,32 @@
     om/IInitState
     (init-state [_]
       {:comm (chan)
-       :page-id nil})
+       :page-id nil
+       :show-loading true})
     om/IWillMount
     (will-mount [_]
-      (let [comm (om/get-state owner :comm)]
+      (om/set-state! owner :show-loading true)
+      (let [comm
+            (om/get-state owner :comm)
+            channels-loading
+            (go
+              (let [loc (<! (utils/get-geolocation))]
+                (om/update! app [:geolocation] loc)
+                (let [response (<! (http/get "/api/channels" {:query-params loc}))]
+                  (om/update! app [:channels] (:body response))
+                  (om/set-state! owner :show-loading false))))
+            apps-loading
+            (go
+              (let [response (<! (http/get "/api/apps"))]
+                (om/update! app [:apps] (:body response))))]
         (go
-          (let [response (<! (http/get "/api/apps"))]
-            (om/update! app [:apps] (:body response)))
+          ; Wait for data to load before registering callbacks
+          (<! (async/merge [channels-loading apps-loading]))
           (while true
             (let [[msg data] (<! comm)]
               (case msg
                 :set-channel
-                (let [channel-link (:link ((:app data) (:apps @app-state)))]
+                (let [channel-link (:link ((:app data) (:apps @app)))]
                   (set! (.-location js/window) (str channel-link "?id=" (:id data))))
                 :navigate
                 (case data
@@ -116,7 +121,8 @@
                 :new-channel
                 (let [response
                       (<! (http/post "/api/channels"
-                                     {:edn-params {:channel-name data}}))]
+                                     {:edn-params {:channel-name data
+                                                   :geolocation (:geolocation @app)}}))]
                   (om/transact! app [:channels] (fn [cs] (conj cs (:body response))))
                   (om/set-state! owner :page-id nil))
                 nil))))
@@ -128,8 +134,10 @@
           (dom/div #js {:id "header"}
             (om/build header app m))
           (dom/div #js {:id "content"}
-            (case page-id
-              :new (om/build new-channel app m)
-              nil (om/build channel-list (:channels app) m))))))))
+            (if (om/get-state owner :show-loading)
+              (dom/div #js {:id "loading"} "Waiting for location...")
+              (case page-id
+                :new (om/build new-channel app m)
+                nil (om/build channel-list (:channels app) m)))))))))
 
 (om/root main app-state {:target (.getElementById js/document "app")})

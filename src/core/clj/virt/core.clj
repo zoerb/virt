@@ -21,17 +21,16 @@
    :headers {"Content-Type" "application/edn"}
    :body (pr-str body)})
 
+(defn geoFromText [lon lat]
+  (str "ST_GeographyFromText('SRID=4326;POINT(" lon " " lat ")')"))
+
 (defn apps-handler [request]
   (edn-response apps))
 
 (defn get-channels [lon lat]
   (korma/select channels
     (korma/where
-      (korma/raw (str "ST_DWithin("
-                      "  location,"
-                      "  ST_GeographyFromText('SRID=4326;POINT(" lon " " lat ")'),"
-                      "  200"
-                      ")")))))
+      (korma/raw (str "ST_DWithin(location," (geoFromText lon lat) ",200)")))))
 
 (defn channels-handler [request]
   (edn-response
@@ -40,14 +39,17 @@
           lat (read-string (get params "lat"))]
       (get-channels lon lat))))
 
-(defn new-channel [channel-name]
+(defn new-channel [channel-name lon lat]
   (korma/insert channels
-    (korma/values {:name channel-name})))
+    (korma/values
+      {:name channel-name
+       :location (korma/raw (geoFromText lon lat))})))
 
 (defn new-channel-handler [request]
   (edn-response
-    (let [body (read-string (slurp (:body request)))]
-      (new-channel (:channel-name body)))))
+    (let [body (read-string (slurp (:body request)))
+          geolocation (:geolocation body)]
+      (new-channel (:channel-name body) (:lon geolocation) (:lat geolocation)))))
 
 (defn get-threads [channel-id]
   (korma/select threads
