@@ -5,7 +5,7 @@
             [clojure.tools.namespace.repl :as ctnr]))
 
 ; Don't reload the user ns
-(ctnr/disable-reload!)
+;(ctnr/disable-reload!)
 
 (defn start-cljs-repl []
   (cemerick.piggieback/cljs-repl
