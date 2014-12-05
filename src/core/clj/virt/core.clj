@@ -3,7 +3,12 @@
             [compojure.route :as route]
             [compojure.core :refer [GET POST defroutes]]
             [ring.util.response :as resp]
-            [ring.middleware.params :as params]
+            (ring.middleware [params :refer [wrap-params]]
+                             [nested-params :refer [wrap-nested-params]]
+                             [keyword-params :refer [wrap-keyword-params]]
+                             [session :refer [wrap-session]]
+                             [resource :refer [wrap-resource]]
+                             [content-type :refer [wrap-content-type]])
             [aleph.http :refer :all]
             [aleph.formats :refer :all]
             [lamina.core :refer :all]
@@ -35,8 +40,8 @@
 (defn channels-handler [request]
   (edn-response
     (let [params (:params request)
-          lon (read-string (get params "lon"))
-          lat (read-string (get params "lat"))]
+          lon (read-string (:lon params))
+          lat (read-string (:lat params))]
       (get-channels lon lat))))
 
 (defn new-channel [channel-name lon lat]
@@ -96,8 +101,11 @@
     (siphon chat ch)
     (siphon ch chat)))
 
+(defn serve-page [page]
+  (-> (resp/resource-response (str page ".html") {:root "public"})
+      (resp/content-type "text/html")))
+
 (defroutes app-routes
-  (route/resources "/")
   (GET "/api/apps" [] apps-handler)
   (GET "/api/channels" [] channels-handler)
   (POST "/api/channels" [] new-channel-handler)
@@ -106,7 +114,7 @@
   (GET "/api/chat/messages/:thread-id" [] chat-messages-handler)
   (GET ["/api/chat/ws/:thread-id", :thread-id #"[0-9A-Za-z]+"] {}
        (wrap-aleph-handler chat-thread-ws-handler))
-  (GET "/*" {:keys [uri]} (resp/resource-response "index.html" {:root "public"}))
+  (GET "/*" [] (serve-page "index"))
   (route/not-found "Page not found"))
 
 (defn -main [& args]
@@ -129,5 +137,13 @@
     (korma/transform
       (fn [m] (:message m))))
 
-  (start-http-server (wrap-ring-handler (params/wrap-params app-routes))
-                     {:port 3000 :websocket true}))
+  (start-http-server
+    (wrap-ring-handler
+      (-> app-routes
+          (wrap-session)
+          (wrap-keyword-params)
+          (wrap-nested-params)
+          (wrap-params)
+          (wrap-resource "public")
+          (wrap-content-type)))
+    {:port 3000 :websocket true}))
