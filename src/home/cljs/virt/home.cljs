@@ -1,4 +1,4 @@
-(ns virt.core
+(ns virt.home
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [goog.events :as events]
             [cljs.core.async :as async :refer [put! <! >! chan timeout]]
