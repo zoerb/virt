@@ -96,8 +96,13 @@
         thread-id (Integer/parseInt (:thread-id params))
         chat (named-channel
                (str thread-id)
-               (fn [new-ch] (receive-all new-ch #(add-msg thread-id %))))]
-    (apply enqueue ch (get-messages thread-id))
+               (fn [new-ch]
+                 (receive-all new-ch
+                   (fn [msg]
+                     (let [[msg-type msg-data] (read-string msg)]
+                       (case msg-type
+                         :message (add-msg thread-id msg-data)))))))]
+    (enqueue ch (pr-str [:initial (vec (get-messages thread-id))]))
     (siphon chat ch)
     (siphon ch chat)))
 

@@ -42,14 +42,21 @@
             comm (chan)]
         (set! (.-onmessage ws)
           (fn [e]
-            (om/transact! messages #(conj % (.-data e)))))
+            (let [[msg-type msg-data] (cljs.reader/read-string (.-data e))]
+              (case msg-type
+                :initial (om/update! messages msg-data)
+                :message (om/transact! messages #(conj % msg-data))))))
         (om/set-state! owner :comm comm)
         (go (while true
               (let [[msg value] (<! comm)]
                 (case msg
-                  :send-message (.send ws value)
+                  :send-message (.send ws (pr-str [:message value]))
                   :close (.close ws)
                   nil))))))
+    om/IDidMount
+    (did-mount [_]
+      (if (om/get-state owner :should-scroll-to-bottom)
+        (.scrollIntoView (om/get-node owner "message-form") false)))
     om/IWillUnmount
     (will-unmount [_]
       (go (>! (om/get-state owner :comm) [:close])))
