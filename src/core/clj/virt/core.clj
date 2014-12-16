@@ -40,8 +40,8 @@
 (defn channels-handler [request]
   (edn-response
     (let [params (:params request)
-          lon (read-string (:lon params))
-          lat (read-string (:lat params))]
+          lon (Double/parseDouble (:lon params))
+          lat (Double/parseDouble (:lat params))]
       (get-channels lon lat))))
 
 (defn new-channel [channel-name lon lat]
@@ -63,7 +63,7 @@
 (defn chat-threads-handler [request]
   (edn-response
     (let [params (:route-params request)
-          channel-id (read-string (:channel-id params))]
+          channel-id (Integer/parseInt (:channel-id params))]
       (get-threads channel-id))))
 
 (defn new-chat-thread [channel-id thread-descr]
@@ -83,7 +83,7 @@
 (defn chat-messages-handler [request]
   (edn-response
     (let [params (:route-params request)
-          thread-id (read-string (:thread-id params))]
+          thread-id (Integer/parseInt (:thread-id params))]
       (get-messages thread-id))))
 
 (defn add-msg [thread-id msg]
