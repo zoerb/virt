@@ -125,6 +125,7 @@
   (GET "/chat/:channel-id/threads/:thread-id" [] chat-messages-handler)
   (GET ["/chat/:channel-id/threads/:thread-id/watch", :thread-id #"[0-9A-Za-z]+"] {}
        (wrap-aleph-handler chat-thread-ws-handler))
+  ; TODO: aleph throwing exception
   (route/not-found "No such api path"))
 
 (defroutes page-routes
@@ -139,17 +140,25 @@
   (korma/defentity channels
     (korma/table :channels)
     (korma/transform
-      (fn [cs] (-> cs
-                   (assoc :app :chat)
-                   (dissoc :location)))))
+      (fn [c] (-> c
+                  (assoc :app :chat)
+                  (dissoc :location)
+                  (clojure.set/rename-keys {:id :channel-id})))))
 
   (korma/defentity threads
-    (korma/table :threads))
+    (korma/table :threads)
+    (korma/transform
+      (fn [t] (clojure.set/rename-keys t {:id :thread-id
+                                          :channel_id :channel-id}))))
 
   (korma/defentity messages
     (korma/table :messages)
     (korma/transform
-      (fn [m] (:message m))))
+      (fn [m] (-> m
+                  (clojure.set/rename-keys {:id :message-id
+                                            :thread_id :thread-id
+                                            :channel_id :channel-id})
+                  :message))))
 
   (start-http-server
     (wrap-ring-handler

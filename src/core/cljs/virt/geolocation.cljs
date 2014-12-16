@@ -1,5 +1,6 @@
-(ns virt.utils
+(ns virt.geolocation
   (:require [cljs.core.async :as async :refer [put! chan]]))
+
 
 (defn get-geolocation []
   (let [out (chan)]

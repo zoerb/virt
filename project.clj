@@ -13,7 +13,7 @@
                  [compojure "1.3.1"]
                  [cljs-http "0.1.21"]
                  [aleph "0.3.2"]
-                 [secretary "1.1.1"]
+                 [bidi "1.12.0"]
                  [om "0.7.1"]]
   :plugins [[lein-cljsbuild "1.0.3"]]
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.1.3"]
