@@ -113,7 +113,7 @@
               (case msg
                 :set-channel
                 (let [channel-link (:link ((:app data) (:apps @app)))]
-                  (set! (.-location js/window) (str channel-link "?id=" (:id data))))
+                  (set! (.-location js/window) (str channel-link "/" (:id data))))
                 :navigate
                 (case data
                   :new (om/set-state! owner :page-id data)

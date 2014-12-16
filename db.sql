@@ -23,9 +23,10 @@ ALTER SEQUENCE threads_id_seq OWNED BY threads.id;
 CREATE SEQUENCE messages_id_seq;
 CREATE TABLE messages (
     id integer DEFAULT nextval('messages_id_seq') PRIMARY KEY,
+    channel_id integer references channels,
     thread_id integer references threads,
     timestamp timestamp default current_timestamp,
-    username varchar(31),
+    userid varchar(31),
     message varchar(1023)
 );
 ALTER SEQUENCE messages_id_seq OWNED BY messages.id;

@@ -1,7 +1,7 @@
 (ns virt.core
   (:require [compojure.handler :as handler]
             [compojure.route :as route]
-            [compojure.core :refer [GET POST defroutes]]
+            [compojure.core :as compojure :refer [GET POST ANY defroutes]]
             [ring.util.response :as resp]
             (ring.middleware [params :refer [wrap-params]]
                              [nested-params :refer [wrap-nested-params]]
@@ -17,7 +17,7 @@
 
 
 (def apps
-  {:chat {:link "/chat.html"}})
+  {:chat {:link "/chat"}})
 
 (declare channels threads messages)
 
@@ -73,26 +73,32 @@
 
 (defn new-chat-thread-handler [request]
   (edn-response
-    (let [body (read-string (slurp (:body request)))]
-      (new-chat-thread (:channel-id body) (:thread-descr body)))))
+    (let [params (:route-params request)
+          channel-id (Integer/parseInt (:channel-id params))
+          body (read-string (slurp (:body request)))]
+      (new-chat-thread channel-id (:thread-descr body)))))
 
-(defn get-messages [thread-id]
+(defn get-messages [channel-id thread-id]
   (korma/select messages
-    (korma/where {:thread_id thread-id})))
+    (korma/where {:channel_id channel-id
+                  :thread_id thread-id})))
 
 (defn chat-messages-handler [request]
   (edn-response
     (let [params (:route-params request)
+          channel-id (Integer/parseInt (:channel-id params))
           thread-id (Integer/parseInt (:thread-id params))]
-      (get-messages thread-id))))
+      (get-messages channel-id thread-id))))
 
-(defn add-msg [thread-id msg]
+(defn add-msg [channel-id thread-id msg]
   (korma/insert messages
-    (korma/values {:thread_id thread-id
+    (korma/values {:channel_id channel-id
+                   :thread_id thread-id
                    :message msg})))
 
 (defn chat-thread-ws-handler [ch request]
   (let [params (:route-params request)
+        channel-id (Integer/parseInt (:channel-id params))
         thread-id (Integer/parseInt (:thread-id params))
         chat (named-channel
                (str thread-id)
@@ -101,8 +107,8 @@
                    (fn [msg]
                      (let [[msg-type msg-data] (read-string msg)]
                        (case msg-type
-                         :message (add-msg thread-id msg-data)))))))]
-    (enqueue ch (pr-str [:initial (vec (get-messages thread-id))]))
+                         :message (add-msg channel-id thread-id msg-data)))))))]
+    (enqueue ch (pr-str [:initial (vec (get-messages channel-id thread-id))]))
     (siphon chat ch)
     (siphon ch chat)))
 
@@ -110,17 +116,20 @@
   (-> (resp/resource-response (str page ".html") {:root "public"})
       (resp/content-type "text/html")))
 
-(defroutes app-routes
-  (GET "/api/apps" [] apps-handler)
-  (GET "/api/channels" [] channels-handler)
-  (POST "/api/channels" [] new-channel-handler)
-  (GET "/api/chat/threads/:channel-id" [] chat-threads-handler)
-  (POST "/api/chat/threads" [] new-chat-thread-handler)
-  (GET "/api/chat/messages/:thread-id" [] chat-messages-handler)
-  (GET ["/api/chat/ws/:thread-id", :thread-id #"[0-9A-Za-z]+"] {}
+(defroutes api-routes
+  (GET "/apps" [] apps-handler)
+  (GET "/channels" [] channels-handler)
+  (POST "/channels" [] new-channel-handler)
+  (GET "/chat/:channel-id/threads" [] chat-threads-handler)
+  (POST "/chat/:channel-id/threads" [] new-chat-thread-handler)
+  (GET "/chat/:channel-id/threads/:thread-id" [] chat-messages-handler)
+  (GET ["/chat/:channel-id/threads/:thread-id/watch", :thread-id #"[0-9A-Za-z]+"] {}
        (wrap-aleph-handler chat-thread-ws-handler))
-  (GET "/*" [] (serve-page "index"))
-  (route/not-found "Page not found"))
+  (route/not-found "No such api path"))
+
+(defroutes page-routes
+  (GET "/chat*" [] (serve-page "chat"))
+  (GET "/*" [] (serve-page "index")))
 
 (defn -main [& args]
   (korma.db/defdb db (db/postgres {:db "virt"
@@ -144,7 +153,8 @@
 
   (start-http-server
     (wrap-ring-handler
-      (-> app-routes
+      (-> (compojure/routes (compojure/context "/api" [] api-routes)
+                            page-routes)
           (wrap-session)
           (wrap-keyword-params)
           (wrap-nested-params)

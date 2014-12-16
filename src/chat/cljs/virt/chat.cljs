@@ -37,7 +37,8 @@
       {:should-scroll-to-bottom true})
     om/IWillMount
     (will-mount [_]
-      (let [wsUri (str "ws://" window.location.host (str "/api/chat/ws/" thread-id))
+      (let [channel-id (om/get-shared owner :channel-id)
+            wsUri (str "ws://" window.location.host "/api/chat/" channel-id "/threads/" thread-id "/watch")
             ws (js/WebSocket. wsUri)
             comm (chan)]
         (set! (.-onmessage ws)
@@ -132,7 +133,7 @@
     om/IWillMount
     (will-mount [_]
       (let [channel-id (om/get-shared owner :channel-id)]
-        (go (let [response (<! (http/get (str "/api/chat/threads/" channel-id)))]
+        (go (let [response (<! (http/get (str "/api/chat/" channel-id "/threads")))]
               (om/update! app [:threads] (:body response))))
         (let [comm (om/get-state owner :comm)]
           (go (while true
@@ -149,9 +150,8 @@
                         (om/set-state! owner :page-id value)))
                     :new-thread
                     (let [response
-                          (<! (http/post "/api/chat/threads"
-                                         {:edn-params {:channel-id channel-id
-                                                       :thread-descr value}}))]
+                          (<! (http/post (str "/api/chat/" channel-id "/threads")
+                                         {:edn-params {:thread-descr value}}))]
                       (om/transact! app [:threads] (fn [ts] (conj ts (:body response))))
                       (om/set-state! owner :page-id nil))
                     nil)))))))
@@ -171,9 +171,6 @@
 
 (om/root main app-state
          {:target (.getElementById js/document "app")
-          :shared {:channel-id (-> js/window
-                                   .-location
-                                   http/parse-url
-                                   :query-params
-                                   :id
+          :shared {:channel-id (-> (re-matches #"/chat/(\d+)(/.*)?" (.. js/window -location -pathname))
+                                   second
                                    cljs.reader/read-string)}})
