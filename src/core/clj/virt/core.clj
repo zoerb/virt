@@ -2,7 +2,8 @@
   (:require [compojure.handler :as handler]
             [compojure.route :as route]
             [compojure.core :as compojure :refer [GET POST ANY defroutes]]
-            [ring.util.response :as resp]
+            (ring.util [request :as req]
+                       [response :as resp])
             (ring.middleware [params :refer [wrap-params]]
                              [nested-params :refer [wrap-nested-params]]
                              [keyword-params :refer [wrap-keyword-params]]
@@ -16,7 +17,8 @@
             [korma.db :as db]
             [cemerick.friend :as friend]
             (cemerick.friend [workflows :as workflows]
-                             [credentials :as creds])))
+                             [credentials :as creds]
+                             [util :refer [gets]])))
 
 
 (def apps
@@ -62,10 +64,9 @@
                    :thread_id thread-id
                    :message msg})))
 
-(defn get-user-password [username]
-  (first
-    (korma/select users
-      (korma/where {:username username}))))
+(defn get-user [{:keys [username]}]
+  {:username username
+   :roles #{::user}})
 
 (defn add-user [username password]
   (korma/insert users
@@ -154,6 +155,22 @@
   (GET "/login" [] (serve-page "login"))
   (friend/logout (ANY "/logout" [] (ring.util.response/redirect "/login"))))
 
+(defn passwordless
+  [& {:keys [login-uri credential-fn login-failure-handler redirect-on-auth?] :as form-config
+      :or {redirect-on-auth? true}}]
+  (fn [{:keys [request-method params form-params] :as request}]
+    (when (and (= (gets :login-uri form-config (::friend/auth-config request)) (req/path-info request))
+               (= :post request-method))
+      (let [username (:username params)]
+        (if-let [user-record (and (not (empty? username))
+                                  ((gets :credential-fn form-config (::friend/auth-config request))
+                                   (with-meta {:username username} {::friend/workflow :passwordless})))]
+          (workflows/make-auth user-record
+                               {::friend/workflow :passwordless
+                                ::friend/redirect-on-auth? redirect-on-auth?})
+          ((or (gets :login-failure-handler form-config (::friend/auth-config request)) #'workflows/interactive-login-redirect)
+           (update-in request [::friend/auth-config] merge form-config)))))))
+
 (defn -main [& args]
   (korma.db/defdb db (db/postgres {:db "virt"
                                    :user "postgres"
@@ -188,8 +205,8 @@
                             (compojure/context "/api" []
                               (friend/wrap-authorize api-routes #{::user}))
                             (friend/wrap-authorize page-routes #{::user}))
-          (friend/authenticate {:credential-fn (partial creds/bcrypt-credential-fn get-user-password)
-                                :workflows [(workflows/interactive-form)]})
+          (friend/authenticate {:credential-fn get-user
+                                :workflows [(passwordless)]})
           (wrap-session)
           (wrap-keyword-params)
           (wrap-nested-params)
