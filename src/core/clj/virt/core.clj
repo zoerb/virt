@@ -28,7 +28,8 @@
 (defn get-channels [lon lat]
   (korma/select channels
     (korma/where
-      (korma/raw (str "ST_DWithin(location," (geoFromText lon lat) ",200)")))))
+      (korma/raw (str "ST_DWithin(location," (geoFromText lon lat) ",200)")))
+    (korma/order :id :DESC)))
 
 (defn add-channel [channel-name lon lat]
   (korma/insert channels
@@ -38,7 +39,8 @@
 
 (defn get-threads [channel-id]
   (korma/select threads
-    (korma/where {:channel_id channel-id})))
+    (korma/where {:channel_id channel-id})
+    (korma/order :id :DESC)))
 
 (defn add-chat-thread [channel-id thread-descr]
   (korma/insert threads
@@ -48,7 +50,8 @@
 (defn get-messages [channel-id thread-id]
   (korma/select messages
     (korma/where {:channel_id channel-id
-                  :thread_id thread-id})))
+                  :thread_id thread-id})
+    (korma/order :id :ASC)))
 
 (defn add-msg [channel-id thread-id msg]
   (korma/insert messages
