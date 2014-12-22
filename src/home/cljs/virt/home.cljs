@@ -1,7 +1,6 @@
 (ns virt.home
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [cljs.core.async :as async :refer [put! <! >! chan timeout]]
-            cljs.reader
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs-http.client :as http]

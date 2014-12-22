@@ -62,13 +62,13 @@
         (go (while true
               (let [[msg data] (<! comm)]
                 (case msg
-                  :send-message (.send ws (pr-str [:message data]))
+                  :send-message (.send ws (pr-str [:message {:message data}]))
                   :close (.close ws)
                   nil))))))
     om/IDidMount
     (did-mount [_]
       (if (om/get-state owner :should-scroll-to-bottom)
-        (.scrollIntoView (om/get-node owner "message-form") false)))
+        (.scrollIntoView (om/get-node owner "leaf-chat") false)))
     om/IWillUnmount
     (will-unmount [_]
       (go (>! (om/get-state owner :comm) [:close])))
@@ -81,20 +81,22 @@
     om/IDidUpdate
     (did-update [_ _ _]
       (if (om/get-state owner :should-scroll-to-bottom)
-        (.scrollIntoView (om/get-node owner "message-form") false)))
+        (.scrollIntoView (om/get-node owner "leaf-chat") false)))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/div #js {:className "leaf-chat"}
-        (apply dom/ul #js {:className "virt-list"}
+      (dom/div #js {:ref "leaf-chat" :className "leaf-chat"}
+        (apply dom/ul #js {:className "message-list uncollapse-margins"}
           (om/build-all
             (fn [message owner]
               (reify
                 om/IRender
-                (render [_] (dom/li nil message))))
+                (render [_]
+                  (dom/li nil
+                    (dom/div nil (:username message))
+                    (:message message)))))
             messages))
         (dom/form
-          #js {:ref "message-form"
-               :onSubmit
+          #js {:onSubmit
                (fn [e]
                  (.preventDefault e)
                  (let [message-input (om/get-node owner "message-input")

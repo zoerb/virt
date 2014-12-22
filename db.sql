@@ -34,7 +34,8 @@ CREATE TABLE messages (
     channel_id integer references channels,
     thread_id integer references threads,
     timestamp timestamp default current_timestamp,
-    user_id integer references users,
+    --user_id integer references users,
+    username text,
     message text
 );
 ALTER SEQUENCE messages_id_seq OWNED BY messages.id;

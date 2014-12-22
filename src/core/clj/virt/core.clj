@@ -54,13 +54,15 @@
 
 (defn get-messages [channel-id thread-id]
   (korma/select messages
+    (korma/fields :username :message)
     (korma/where {:channel_id channel-id
                   :thread_id thread-id})
     (korma/order :id :ASC)))
 
-(defn add-msg [channel-id thread-id msg]
+(defn add-msg [user channel-id thread-id msg]
   (korma/insert messages
-    (korma/values {:channel_id channel-id
+    (korma/values {:username user
+                   :channel_id channel-id
                    :thread_id thread-id
                    :message msg})))
 
@@ -115,21 +117,30 @@
           thread-id (Integer/parseInt (:thread-id params))]
       (get-messages channel-id thread-id))))
 
-(defn chat-thread-ws-handler [ch request]
+(defn chat-thread-ws-handler [client-ch request]
   (let [params (:route-params request)
         channel-id (Integer/parseInt (:channel-id params))
         thread-id (Integer/parseInt (:thread-id params))
-        chat (named-channel
-               (str thread-id)
-               (fn [new-ch]
-                 (receive-all new-ch
-                   (fn [msg]
-                     (let [[msg-type msg-data] (read-string msg)]
-                       (case msg-type
-                         :message (add-msg channel-id thread-id msg-data)))))))]
-    (enqueue ch (pr-str [:initial (vec (get-messages channel-id thread-id))]))
-    (siphon chat ch)
-    (siphon ch chat)))
+        broadcast-ch
+        (named-channel
+          (str channel-id "/" thread-id)
+          (fn [new-ch]
+            (receive-all new-ch
+              (fn [[msg-type {:keys [username message]}]]
+                (case msg-type
+                  :message (add-msg username channel-id thread-id message))))))]
+    (enqueue client-ch (pr-str [:initial (vec (get-messages channel-id thread-id))]))
+    (siphon
+      (map* #(pr-str %) broadcast-ch)
+      client-ch)
+    (let [username (:username (friend/current-authentication request))]
+      (siphon
+        (map*
+          (fn [msg]
+            (let [[msg-type msg-data] (read-string msg)]
+              [msg-type (assoc msg-data :username username)]))
+          client-ch)
+        broadcast-ch))))
 
 (defn serve-page [page]
   (-> (resp/resource-response (str page ".html") {:root "public"})
@@ -193,8 +204,7 @@
       (fn [m] (-> m
                   (clojure.set/rename-keys {:id :message-id
                                             :thread_id :thread-id
-                                            :channel_id :channel-id})
-                  :message))))
+                                            :channel_id :channel-id})))))
 
   (korma/defentity users
     (korma/transform #(assoc % :roles #{::user})))

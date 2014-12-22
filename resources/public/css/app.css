@@ -80,12 +80,13 @@ header > *:first-child, header > *:last-child {
 }
 
 input {
-  border: 1px #d0d0d0 solid;
+  border: 1px solid #d0d0d0;
   -webkit-appearance: none;
   box-sizing: border-box;
   color: #555555;
   font-size: inherit;
   font-family: inherit;
+  border-radius: 6px;
 }
 
 .new-thread-form, .new-channel-form, .login-form {
@@ -103,16 +104,15 @@ input {
   margin: 15px auto;
 }
 
-.leaf-chat form {
-  box-sizing: border-box;
-  padding: 6px;
-  width: 100%;
+.leaf-chat {
+  padding: 12px;
 }
 
 .leaf-chat input {
   width: 100%;
   padding: 6px;
   margin: 0;
+  border: 1px solid #e0e0e0;
 }
 
 .virt-list {
@@ -150,4 +150,35 @@ input {
 #loading {
   text-align: center;
   padding-top: 26px;
+}
+
+.message-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.message-list > li {
+  float: left;
+  clear: left;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.message-list > li > div {
+  color: #bbb;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.uncollapse-margins:before,
+.uncollapse-margins:after
+{
+  content: "\00a0"; /* No-break space character */
+  display: block;
+  overflow: hidden;
+  height: 0;
 }
