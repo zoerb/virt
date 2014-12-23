@@ -3,7 +3,7 @@ CREATE EXTENSION postgis;
 CREATE SEQUENCE channels_id_seq;
 CREATE TABLE channels (
     id integer DEFAULT nextval('channels_id_seq') PRIMARY KEY,
-    name varchar(255),
+    name text,
     location geography(POINT,4326)
 );
 ALTER SEQUENCE channels_id_seq OWNED BY channels.id;
@@ -16,7 +16,7 @@ CREATE SEQUENCE threads_id_seq;
 CREATE TABLE threads (
     id integer DEFAULT nextval('threads_id_seq') PRIMARY KEY,
     channel_id integer references channels,
-    description varchar(255)
+    description text
 );
 ALTER SEQUENCE threads_id_seq OWNED BY threads.id;
 
@@ -26,8 +26,8 @@ CREATE TABLE messages (
     channel_id integer references channels,
     thread_id integer references threads,
     timestamp timestamp default current_timestamp,
-    userid varchar(31),
-    message varchar(1023)
+    userid text,
+    message text
 );
 ALTER SEQUENCE messages_id_seq OWNED BY messages.id;
 
