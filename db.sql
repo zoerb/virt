@@ -1,5 +1,13 @@
 CREATE EXTENSION postgis;
 
+CREATE SEQUENCE users_id_seq;
+CREATE TABLE users (
+    id integer DEFAULT nextval('users_id_seq') PRIMARY KEY,
+    username text,
+    password char(60)
+);
+ALTER SEQUENCE users_id_seq OWNED BY users.id;
+
 CREATE SEQUENCE channels_id_seq;
 CREATE TABLE channels (
     id integer DEFAULT nextval('channels_id_seq') PRIMARY KEY,
@@ -26,11 +34,7 @@ CREATE TABLE messages (
     channel_id integer references channels,
     thread_id integer references threads,
     timestamp timestamp default current_timestamp,
-    userid text,
+    user_id integer references users,
     message text
 );
 ALTER SEQUENCE messages_id_seq OWNED BY messages.id;
-
---DROP TABLE messages;
---DROP TABLE threads;
---DROP TABLE channels;

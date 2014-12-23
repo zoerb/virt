@@ -88,16 +88,17 @@ input {
   font-family: inherit;
 }
 
-.new-thread, .new-channel {
+.new-thread-form, .new-channel-form, .login-form {
   width: 100%;
   text-align: center;
   padding: 40px 0;
 }
-.new-thread input, .new-channel input {
+.new-thread-form input, .new-channel-form input, .login-form input {
   width: 90%;
   padding: 6px;
+  margin-bottom: 6px;
 }
-.new-thread button, .new-channel button {
+.new-thread-form button, .new-channel-form button, .login-form button {
   display: block;
   margin: 15px auto;
 }

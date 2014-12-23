@@ -124,7 +124,7 @@
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/form #js {:className "new-thread"}
+      (dom/form #js {:className "new-thread-form"}
         (dom/input #js {:ref "new-thread-input" :placeholder "Title" :autoFocus true})
         (dom/button
           #js {:className "transparent-button"

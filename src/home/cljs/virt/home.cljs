@@ -60,7 +60,7 @@
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/form #js {:className "new-channel"}
+      (dom/form #js {:className "new-channel-form"}
         (dom/input #js {:ref "new-channel-input" :placeholder "Title" :autoFocus true})
         (dom/button
           #js {:className "transparent-button"

@@ -13,14 +13,17 @@
             [aleph.formats :refer :all]
             [lamina.core :refer :all]
             [korma.core :as korma]
-            [korma.db :as db]))
+            [korma.db :as db]
+            [cemerick.friend :as friend]
+            (cemerick.friend [workflows :as workflows]
+                             [credentials :as creds])))
 
 
 (def apps
   {:chat {:link "/chat"}})
 
 
-(declare channels threads messages)
+(declare channels threads messages users)
 
 (defn geoFromText [lon lat]
   (str "ST_GeographyFromText('SRID=4326;POINT(" lon " " lat ")')"))
@@ -58,6 +61,16 @@
     (korma/values {:channel_id channel-id
                    :thread_id thread-id
                    :message msg})))
+
+(defn get-user-password [username]
+  (first
+    (korma/select users
+      (korma/where {:username username}))))
+
+(defn add-user [username password]
+  (korma/insert users
+    (korma/values {:username username
+                   :password (creds/hash-bcrypt password)})))
 
 
 (defn edn-response [body]
@@ -137,6 +150,10 @@
   (GET "/chat*" [] (serve-page "chat"))
   (GET "/*" [] (serve-page "index")))
 
+(defroutes login-routes
+  (GET "/login" [] (serve-page "login"))
+  (friend/logout (ANY "/logout" [] (ring.util.response/redirect "/login"))))
+
 (defn -main [& args]
   (korma.db/defdb db (db/postgres {:db "virt"
                                    :user "postgres"
@@ -162,10 +179,17 @@
                                             :channel_id :channel-id})
                   :message))))
 
+  (korma/defentity users
+    (korma/transform #(assoc % :roles #{::user})))
+
   (start-http-server
     (wrap-ring-handler
-      (-> (compojure/routes (compojure/context "/api" [] api-routes)
-                            page-routes)
+      (-> (compojure/routes login-routes
+                            (compojure/context "/api" []
+                              (friend/wrap-authorize api-routes #{::user}))
+                            (friend/wrap-authorize page-routes #{::user}))
+          (friend/authenticate {:credential-fn (partial creds/bcrypt-credential-fn get-user-password)
+                                :workflows [(workflows/interactive-form)]})
           (wrap-session)
           (wrap-keyword-params)
           (wrap-nested-params)
