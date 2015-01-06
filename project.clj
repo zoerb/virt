@@ -27,7 +27,7 @@
              {:source-paths ["src/home/cljs" "src/core/cljs" "dev/cljs"]
               :compiler {
                 :output-to "resources/public/js/out/home/home.js"
-                :source-map "resources/public/js/out/home/home.js.map"
+                :source-map true
                 :output-dir "resources/public/js/out/home"
                 :optimizations :none}}
              :home-prod
@@ -43,7 +43,7 @@
              {:source-paths ["src/chat/cljs" "src/core/cljs" "dev/cljs"]
               :compiler {
                 :output-to "resources/public/js/out/chat/chat.js"
-                :source-map "resources/public/js/out/chat/chat.js.map"
+                :source-map true
                 :output-dir "resources/public/js/out/chat"
                 :optimizations :none}}
              :chat-prod
