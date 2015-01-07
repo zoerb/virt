@@ -1,5 +1,6 @@
 (ns virt.router
-  (:require [bidi.bidi :as bidi]))
+  (:require [bidi.bidi :as bidi]
+            [cljs.reader]))
 
 
 ; [[:home {:channel-id 1}]]                                        <=> "/chat/1"
