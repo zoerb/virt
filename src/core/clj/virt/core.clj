@@ -18,7 +18,9 @@
             [cemerick.friend :as friend]
             (cemerick.friend [workflows :as workflows]
                              [credentials :as creds]
-                             [util :refer [gets]])))
+                             [util :refer [gets]])
+            [selmer.parser :refer [render-file]]
+            [environ.core :refer [env]]))
 
 
 (def apps
@@ -143,7 +145,8 @@
         broadcast-ch))))
 
 (defn serve-page [page]
-  (-> (resp/resource-response (str page ".html") {:root "public"})
+  (-> (render-file (str "public/" page ".html") {:dev (env :dev?)})
+      (resp/response)
       (resp/content-type "text/html")))
 
 (defroutes api-routes

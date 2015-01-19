@@ -14,11 +14,15 @@
                  [aleph "0.3.2"]
                  [bidi "1.12.0"]
                  [org.om/om "0.8.0"]
-                 [com.cemerick/friend "0.2.1" :exclusions [org.clojure/core.cache]]]
-  :plugins [[lein-cljsbuild "1.0.3"]]
+                 [com.cemerick/friend "0.2.1" :exclusions [org.clojure/core.cache]]
+                 [selmer "0.7.9"]
+                 [environ "1.0.0"]]
+  :plugins [[lein-cljsbuild "1.0.3"]
+            [lein-environ "1.0.0"]]
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.1.3"]
                                   [org.clojure/tools.namespace "0.2.7"]]
-                   :source-paths ["dev/clj" "dev/cljs"]}}
+                   :source-paths ["dev/clj" "dev/cljs"]
+                   :env {:dev? true}}}
   :aliases {"build-dev" ["cljsbuild" "auto" "home-dev" "chat-dev"]
             "build-prod" ["cljsbuild" "once" "home-prod" "chat-prod"]}
   :cljsbuild {
