@@ -39,6 +39,12 @@
                              :onClick #(put! comm [:navigate [:new]])}
                         "New")))))))
 
+(defn loading [_ _]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:id "loading"} "Loading..."))))
+
 (defn list-item [channel owner]
   (reify
     om/IRenderState
@@ -73,30 +79,28 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:comm (chan)
-       :show-loading true})
+      {:comm (chan)})
     om/IWillMount
     (will-mount [_]
-      (om/set-state! owner :show-loading true)
       (let [nav-chan (listen-navigation)]
         (go (while true
           (om/update! app [:page-stack] (path-to-stack routes (<! nav-chan))))))
-      (let [comm
-            (om/get-state owner :comm)
-            channels-loading
-            (go
-              (let [loc (<! (get-geolocation))]
-                (om/update! app [:geolocation] loc)
-                (let [response (<! (http/get "/api/channels" {:query-params loc}))]
-                  (om/update! app [:channels] (:body response))
-                  (om/set-state! owner :show-loading false))))
-            apps-loading
-            (go
-              (let [response (<! (http/get "/api/apps"))]
-                (om/update! app [:apps] (:body response))))]
+      (let [comm (om/get-state owner :comm)]
         (go
-          ; Wait for data to load before registering callbacks
-          (<! (async/merge [channels-loading apps-loading]))
+          ; Load channels and apps in parallel (mostly for illustration purposes for now)
+          (let [channels-loading
+                (go
+                  (let [loc (<! (get-geolocation))]
+                    (om/update! app [:geolocation] loc)
+                    (let [response (<! (http/get "/api/channels" {:query-params loc}))]
+                      (om/update! app [:channels] (:body response)))))
+                apps-loading
+                (go
+                  (let [response (<! (http/get "/api/apps"))]
+                    (om/update! app [:apps] (:body response))))]
+            ; Wait for data to load before continuing
+            (while (some? (<! (async/merge [channels-loading apps-loading]))))
+            (om/transact! app [:page-stack] #(pop %)))
           (while true
             (let [[msg data] (<! comm)]
               (case msg
@@ -131,16 +135,16 @@
                :opts params}]
         (dom/div nil
           (dom/div #js {:id "header"}
-            (om/build header app (assoc m :state {:show-back-button (not= page :home)
+            (om/build header app (assoc m :state {:show-back-button (= page :new)
                                                   :show-new-button (= page :home)})))
           (dom/div #js {:id "content"}
-            (if (om/get-state owner :show-loading)
-              (dom/div #js {:id "loading"} "Waiting for location...")
-              (case page
-                :new (om/build new-channel nil m)
-                :home (om/build channel-list (:channels app) m)))))))))
+            (case page
+              :loading (om/build loading nil)
+              :new (om/build new-channel nil m)
+              :home (om/build channel-list (:channels app) m))))))))
 
-(let [stack (path-to-stack routes (.. js/document -location -pathname))
+(let [page-stack (path-to-stack routes (.. js/document -location -pathname))
+      stack (conj page-stack [:loading nil])
       [_ home-params] (stack 0)]
   (swap! app-state assoc :page-stack stack)
   (om/root main app-state {:target (.getElementById js/document "app")
