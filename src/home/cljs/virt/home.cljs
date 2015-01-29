@@ -7,6 +7,7 @@
             [virt.history :refer [listen-navigation set-history-path!]]
             [virt.geolocation :refer [get-geolocation]]
             [virt.router :refer [stack-to-path path-to-stack]]
+            [virt.login :refer [mount-login]]
             [virt.components :as comps]))
 
 
@@ -133,6 +134,10 @@
 (let [page-stack (path-to-stack routes (.. js/document -location -pathname))
       stack (conj page-stack [:loading nil])
       [_ home-params] (stack 0)]
-  (swap! app-state assoc :page-stack stack)
-  (om/root main app-state {:target (.getElementById js/document "app")
-                           :opts home-params}))
+  (go
+    (let [response (<! (http/get "/api/session"))]
+      (if (= (:body response) :no-active-session)
+        (<! (mount-login))))
+    (swap! app-state assoc :page-stack stack)
+    (om/root main app-state {:target (.getElementById js/document "app")
+                             :opts home-params})))

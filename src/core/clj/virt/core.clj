@@ -1,7 +1,7 @@
 (ns virt.core
   (:require [compojure.handler :as handler]
             [compojure.route :as route]
-            [compojure.core :as compojure :refer [GET POST ANY defroutes]]
+            [compojure.core :as compojure :refer [GET POST DELETE ANY defroutes]]
             (ring.util [request :as req]
                        [response :as resp])
             (ring.middleware [params :refer [wrap-params]]
@@ -78,10 +78,13 @@
                    :password (creds/hash-bcrypt password)})))
 
 
-(defn edn-response [body]
-  {:status 200
-   :headers {"Content-Type" "application/edn"}
-   :body (pr-str body)})
+(defn edn-response
+  ([body]
+    (edn-response body 200))
+  ([body status]
+    {:status status
+     :headers {"Content-Type" "application/edn"}
+     :body (pr-str body)}))
 
 (defn apps-handler [request]
   (edn-response apps))
@@ -165,25 +168,36 @@
   (GET "/chat*" [] (serve-page "chat"))
   (GET "/*" [] (serve-page "index")))
 
-(defroutes login-routes
-  (GET "/login" [] (serve-page "login"))
-  (friend/logout (ANY "/logout" [] (ring.util.response/redirect "/login"))))
+(defn handle-session [request]
+  (let [method (:request-method request)
+        auth-data (friend/current-authentication)]
+    (if auth-data
+      (case method
+        :post (edn-response auth-data)
+        :get (edn-response auth-data))
+      (edn-response :no-active-session))))
 
-(defn passwordless
-  [& {:keys [login-uri credential-fn login-failure-handler redirect-on-auth?] :as form-config
-      :or {redirect-on-auth? true}}]
-  (fn [{:keys [request-method params form-params] :as request}]
-    (when (and (= (gets :login-uri form-config (::friend/auth-config request)) (req/path-info request))
-               (= :post request-method))
-      (let [username (:username params)]
-        (if-let [user-record (and (not (empty? username))
-                                  ((gets :credential-fn form-config (::friend/auth-config request))
-                                   (with-meta {:username username} {::friend/workflow :passwordless})))]
+(defroutes session-routes
+  (GET "/api/session" [] handle-session)
+  (POST "/api/session" [] handle-session)
+  (friend/logout (DELETE "/api/session" [] (resp/redirect "/"))))
+
+(defn login-failed [request]
+  (edn-response :login-failed 401))
+
+(defn passwordless [{:keys [request-method params form-params] :as request}]
+  (when (and (= (:login-uri (::friend/auth-config request)) (req/path-info request))
+             (= :post request-method))
+    (let [username (:username params)]
+      (if (empty? username)
+        (edn-response :invalid-username 400)
+        (if-let [user-record ((:credential-fn (::friend/auth-config request))
+                              (with-meta {:username username} {::friend/workflow :passwordless}))]
           (workflows/make-auth user-record
                                {::friend/workflow :passwordless
-                                ::friend/redirect-on-auth? redirect-on-auth?})
-          ((or (gets :login-failure-handler form-config (::friend/auth-config request)) #'workflows/interactive-login-redirect)
-           (update-in request [::friend/auth-config] merge form-config)))))))
+                                ::friend/redirect-on-auth? false})
+          (login-failed request))))))
+
 
 (defn -main [& args]
   (korma.db/defdb db (db/postgres {:db "virt"
@@ -214,12 +228,13 @@
 
   (start-http-server
     (wrap-ring-handler
-      (-> (compojure/routes login-routes
+      (-> (compojure/routes session-routes
                             (compojure/context "/api" []
                               (friend/wrap-authorize api-routes #{::user}))
-                            (friend/wrap-authorize page-routes #{::user}))
+                            page-routes)
           (friend/authenticate {:credential-fn get-user
-                                :workflows [(passwordless)]})
+                                :workflows [passwordless]
+                                :login-uri "/api/session"})
           (wrap-session)
           (wrap-keyword-params)
           (wrap-nested-params)

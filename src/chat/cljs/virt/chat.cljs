@@ -6,6 +6,7 @@
             [cljs-http.client :as http]
             [virt.history :refer [listen-navigation set-history-path!]]
             [virt.router :refer [stack-to-path path-to-stack]]
+            [virt.login :refer [mount-login]]
             [virt.components :as comps]))
 
 
@@ -192,8 +193,12 @@
 (let [stack (path-to-stack routes (.. js/document -location -pathname))
       [_ home-params] (stack 0)
       [page params] (peek stack)]
-  (if (= page :thread)
-    (swap! app-state update-in [:messages] assoc (:thread-id params) []))
-  (swap! app-state assoc :page-stack stack)
-  (om/root main app-state {:target (.getElementById js/document "app")
-                           :opts home-params}))
+  (go
+    (let [response (<! (http/get "/api/session"))]
+      (if (= (:body response) :no-active-session)
+        (<! (mount-login))))
+    (if (= page :thread)
+      (swap! app-state update-in [:messages] assoc (:thread-id params) []))
+    (swap! app-state assoc :page-stack stack)
+    (om/root main app-state {:target (.getElementById js/document "app")
+                             :opts home-params})))
