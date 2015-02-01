@@ -6,7 +6,8 @@
             [cljs-http.client :as http]
             [virt.history :refer [listen-navigation set-history-path!]]
             [virt.geolocation :refer [get-geolocation]]
-            [virt.router :refer [stack-to-path path-to-stack]]))
+            [virt.router :refer [stack-to-path path-to-stack]]
+            [virt.components :as comps]))
 
 
 (def app-state
@@ -18,26 +19,6 @@
 (def routes
   [[["/" [#".*" :rest]] :home]
    ["" {"new" :new}]])
-
-(defn header [app owner]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [comm show-back-button show-new-button]}]
-      (dom/header nil
-        (dom/div nil
-          (if show-back-button
-            (dom/button #js {:id "back-button"
-                             :className "transparent-button"
-                             :onClick #(put! comm [:navigate [:back]])}
-                        "Back")))
-        (dom/div nil
-          (dom/div #js {:id "header-title"} "Virt"))
-        (dom/div nil
-          (if show-new-button
-            (dom/button #js {:id "new-button"
-                             :className "transparent-button"
-                             :onClick #(put! comm [:navigate [:new]])}
-                        "New")))))))
 
 (defn loading [_ _]
   (reify
@@ -135,8 +116,14 @@
                :opts params}]
         (dom/div nil
           (dom/div #js {:id "header"}
-            (om/build header app (assoc m :state {:show-back-button (= page :new)
-                                                  :show-new-button (= page :home)})))
+            (om/build comps/header app
+              {:opts {:title "Virt"
+                      :left-button {:show (= page :new)
+                                    :text "Back"
+                                    :onClick #(put! comm [:navigate [:back]])}
+                      :right-button {:show (= page :home)
+                                     :text "New"
+                                     :onClick #(put! comm [:navigate [:new]])}}}))
           (dom/div #js {:id "content"}
             (case page
               :loading (om/build loading nil)

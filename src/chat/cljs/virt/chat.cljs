@@ -5,7 +5,8 @@
             [om.dom :as dom :include-macros true]
             [cljs-http.client :as http]
             [virt.history :refer [listen-navigation set-history-path!]]
-            [virt.router :refer [stack-to-path path-to-stack]]))
+            [virt.router :refer [stack-to-path path-to-stack]]
+            [virt.components :as comps]))
 
 
 (def app-state
@@ -22,25 +23,6 @@
 
 (def routes
   [home-route page-routes])
-
-(defn header [app owner]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [comm show-new-button]}]
-      (dom/header nil
-        (dom/div nil
-          (dom/button #js {:id "back-button"
-                           :className "transparent-button"
-                           :onClick #(put! comm [:navigate [:back]])}
-                      "Back"))
-        (dom/div nil
-          (dom/div #js {:id "header-title"} "Chat"))
-        (dom/div nil
-          (if show-new-button
-            (dom/button #js {:id "new-button"
-                             :className "transparent-button"
-                             :onClick #(put! comm [:navigate [:new]])}
-                        "New")))))))
 
 (defn leaf-chat [messages owner {:keys [channel-id thread-id]}]
   (reify
@@ -191,7 +173,14 @@
                :opts params}]
         (dom/div nil
           (dom/div #js {:id "header"}
-            (om/build header app (assoc m :state {:show-new-button (= page :home)})))
+            (om/build comps/header app
+              {:opts {:title "Chat"
+                      :left-button {:show true
+                                    :text "Back"
+                                    :onClick #(put! comm [:navigate [:back]])}
+                      :right-button {:show (= page :home)
+                                     :text "New"
+                                     :onClick #(put! comm [:navigate [:new]])}}}))
           (dom/div #js {:id "content"}
             (case page
               :home (om/build chat-root (:threads app) m)
