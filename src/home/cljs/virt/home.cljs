@@ -83,6 +83,14 @@
             ; Wait for data to load before continuing
             (while (some? (<! (async/merge [channels-loading apps-loading]))))
             (om/transact! app [:page-stack] #(pop %)))
+          (om/set-state! owner :poll-interval
+            (js/setInterval
+              #(go
+                 (let [loc (<! (get-geolocation))]
+                   (om/update! app [:geolocation] loc)
+                   (let [response (<! (http/get "/api/channels" {:query-params loc}))]
+                     (om/update! app [:channels] (:body response)))))
+              3000))
           (while true
             (let [[msg data] (<! comm)]
               (case msg
@@ -109,6 +117,9 @@
                   (om/transact! app [:channels] (fn [cs] (conj cs (:body response))))
                   (put! comm [:navigate [:back]]))
                 nil))))))
+    om/IWillUnmount
+    (will-unmount [_]
+      (js/clearInterval (om/get-state :poll-interval)))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (let [page-stack (:page-stack app)
