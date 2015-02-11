@@ -3,7 +3,7 @@ CREATE EXTENSION postgis;
 CREATE SEQUENCE users_id_seq;
 CREATE TABLE users (
     id integer DEFAULT nextval('users_id_seq') PRIMARY KEY,
-    username text,
+    username text NOT NULL,
     password char(60)
 );
 ALTER SEQUENCE users_id_seq OWNED BY users.id;
@@ -11,7 +11,7 @@ ALTER SEQUENCE users_id_seq OWNED BY users.id;
 CREATE SEQUENCE channels_id_seq;
 CREATE TABLE channels (
     id integer DEFAULT nextval('channels_id_seq') PRIMARY KEY,
-    name text,
+    name text NOT NULL,
     location geography(POINT,4326)
 );
 ALTER SEQUENCE channels_id_seq OWNED BY channels.id;
@@ -23,10 +23,10 @@ CREATE INDEX channels_gix
 CREATE SEQUENCE messages_id_seq;
 CREATE TABLE messages (
     id integer DEFAULT nextval('messages_id_seq') PRIMARY KEY,
-    channel_id integer references channels,
+    channel_id integer references channels NOT NULL,
     timestamp timestamp default current_timestamp,
     --user_id integer references users,
-    username text,
-    message text
+    username text NOT NULL,
+    message text NOT NULL
 );
 ALTER SEQUENCE messages_id_seq OWNED BY messages.id;
