@@ -1,5 +1,5 @@
-(ns virt.home-dev
-  (:require [virt.home]
+(ns virt.dev
+  (:require [virt.main]
             [clojure.browser.repl :as repl]))
 
 (enable-console-print!)

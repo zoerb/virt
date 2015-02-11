@@ -1,4 +1,4 @@
-(ns virt.home
+(ns virt.main
   (:require-macros [cljs.core.async.macros :refer [go alt!]])
   (:require [cljs.core.async :as async :refer [put! <! >! chan timeout]]
             [om.core :as om :include-macros true]
@@ -8,18 +8,21 @@
             [virt.geolocation :refer [get-geolocation]]
             [virt.router :refer [stack-to-path path-to-stack]]
             [virt.login :refer [mount-login]]
-            [virt.components :as comps]))
+            [virt.header :refer [header]]
+            [virt.chat :as chat]))
 
 
 (def app-state
   (atom {:page-stack []
          :apps {}
          :channels {}
-         :geolocation nil}))
+         :geolocation nil
+         :chat chat/app-state}))
 
 (def routes
   [[["/" [#".*" :rest]] :home]
-   ["" {"new" :new}]])
+   ["" [["new" :new]
+        chat/routes]]])
 
 (defn loading [_ _]
   (reify
@@ -31,7 +34,7 @@
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/li #js {:onClick (fn [e] (put! comm [:set-channel channel]))}
+      (dom/li #js {:onClick (fn [e] (put! comm [:navigate [:virt.chat/home channel]]))}
         (dom/div #js {:className "name"} (:name channel))
         (dom/div #js {:className "aux"} (name (:app channel)))))))
 
@@ -95,9 +98,6 @@
             (let [[msg data] (<! comm)]
               (case msg
                 ; TODO: remove/re-evaluate cursor derefs when upgrading to Om 0.8
-                :set-channel
-                (let [channel-link (:link ((:app data) (:apps @app)))]
-                  (set! (.-location js/window) (str channel-link "/" (:channel-id data))))
                 :navigate
                 (let [page-stack (:page-stack @app)
                       [nav-type page-params] data
@@ -105,10 +105,9 @@
                       new-stack
                       (case nav-type
                         :back (pop page-stack)
-                        :new (conj page-stack [:new params]))]
-                  (do
-                    (om/update! app [:page-stack] new-stack)
-                    (set-history-path! (stack-to-path routes new-stack))))
+                        (conj page-stack [nav-type params]))]
+                  (om/update! app [:page-stack] new-stack)
+                  (set-history-path! (stack-to-path routes new-stack)))
                 :new-channel
                 (let [response
                       (<! (http/post "/api/channels"
@@ -128,9 +127,9 @@
                :opts params}]
         (dom/div nil
           (dom/div #js {:id "header"}
-            (om/build comps/header app
+            (om/build header app
               {:opts {:title "Virt"
-                      :left-button {:show (= page :new)
+                      :left-button {:show (not= page :home)
                                     :text "Back"
                                     :onClick #(put! comm [:navigate [:back]])}
                       :right-button {:show (= page :home)
@@ -140,15 +139,15 @@
             (case page
               :loading (om/build loading nil)
               :new (om/build new-channel nil m)
-              :home (om/build channel-list (:channels app) m))))))))
+              :home (om/build channel-list (:channels app) m)
+              :virt.chat/home (om/build chat/main (:chat app) m))))))))
 
-(let [page-stack (path-to-stack routes (.. js/document -location -pathname))
-      stack (conj page-stack [:loading nil])
-      [_ home-params] (stack 0)]
-  (go
-    (let [response (<! (http/get "/api/session"))]
-      (if (= (:body response) :no-active-session)
-        (<! (mount-login))))
+(go
+  ; TODO: do authentication after mounting and make login a page instead of a new root
+  (let [response (<! (http/get "/api/session"))]
+    (if (= (:body response) :no-active-session)
+      (<! (mount-login))))
+  (let [page-stack (path-to-stack routes (.. js/document -location -pathname))
+        stack (conj page-stack [:loading nil])]
     (swap! app-state assoc :page-stack stack)
-    (om/root main app-state {:target (.getElementById js/document "app")
-                             :opts home-params})))
+    (om/root main app-state {:target (.getElementById js/document "app")})))

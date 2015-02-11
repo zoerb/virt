@@ -1,20 +1,14 @@
 (ns virt.chat
-  (:require-macros [cljs.core.async.macros :refer [go alt!]])
-  (:require [cljs.core.async :refer [put! <! >! chan timeout]]
+  (:require-macros [cljs.core.async.macros :refer [go]])
+  (:require [cljs.core.async :refer [put! <! >! chan]]
+            [cljs.reader]
             [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true]
-            [cljs-http.client :as http]
-            [virt.router :refer [path-to-stack]]
-            [virt.login :refer [mount-login]]
-            [virt.components :as comps]))
+            [om.dom :as dom :include-macros true]))
 
 
-(def app-state
-  (atom {:page-stack []
-         :messages []}))
+(def routes [["chat/" [#"\d+" :channel-id]] ::home])
 
-(def routes
-  [[["/chat/" [#"\d+" :channel-id]] :home]])
+(def app-state {:messages []})
 
 (defn leaf-chat [messages owner {:keys [channel-id]}]
   (reify
@@ -82,30 +76,11 @@
                        (set! (.-value message-input) "")))))}
           (dom/input #js {:ref "message-input"}))))))
 
-(defn main [app owner]
+(defn main [app owner params]
   (reify
     om/IRender
     (render [_]
-      (let [page-stack (:page-stack app)
-            [page params] (peek page-stack)]
-        (dom/div nil
-          (dom/div #js {:id "header"}
-            (om/build comps/header app
-              {:opts {:title "Chat"
-                      :left-button {:show true
-                                    :text "Back"
-                                    :onClick #(set! (.-location js/window) "/")}}}))
-          (dom/div #js {:id "content"}
-            (om/build leaf-chat
-                      (:messages app)
-                      {:opts params})))))))
-
-(let [stack (path-to-stack routes (.. js/document -location -pathname))
-      [_ home-params] (stack 0)
-      [page params] (peek stack)]
-  (go
-    (let [response (<! (http/get "/api/session"))]
-      (if (= (:body response) :no-active-session)
-        (<! (mount-login))))
-    (swap! app-state assoc :page-stack stack)
-    (om/root main app-state {:target (.getElementById js/document "app")})))
+      (dom/div #js {:id "content"}
+        (om/build leaf-chat
+                  (:messages app)
+                  {:opts params})))))

@@ -1,0 +1,41 @@
+.leaf-chat {
+  padding: 12px;
+}
+
+.leaf-chat input {
+  width: 100%;
+  padding: 6px;
+  margin: 0;
+  border: 1px solid #e0e0e0;
+}
+
+.message-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.message-list > li {
+  float: left;
+  clear: left;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.message-list > li > div {
+  color: #bbb;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.uncollapse-margins:before,
+.uncollapse-margins:after
+{
+  content: "\00a0"; /* No-break space character */
+  display: block;
+  overflow: hidden;
+  height: 0;
+}

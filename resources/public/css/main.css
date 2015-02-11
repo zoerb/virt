@@ -89,30 +89,19 @@ input {
   border-radius: 6px;
 }
 
-.new-thread-form, .new-channel-form, .login-form {
+.new-channel-form, .login-form {
   width: 100%;
   text-align: center;
   padding: 40px 0;
 }
-.new-thread-form input, .new-channel-form input, .login-form input {
+.new-channel-form input, .login-form input {
   width: 90%;
   padding: 6px;
   margin-bottom: 6px;
 }
-.new-thread-form button, .new-channel-form button, .login-form button {
+.new-channel-form button, .login-form button {
   display: block;
   margin: 15px auto;
-}
-
-.leaf-chat {
-  padding: 12px;
-}
-
-.leaf-chat input {
-  width: 100%;
-  padding: 6px;
-  margin: 0;
-  border: 1px solid #e0e0e0;
 }
 
 .virt-list {
@@ -150,35 +139,4 @@ input {
 #loading {
   text-align: center;
   padding-top: 26px;
-}
-
-.message-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.message-list > li {
-  float: left;
-  clear: left;
-  background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  padding: 10px;
-}
-
-.message-list > li > div {
-  color: #bbb;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.uncollapse-margins:before,
-.uncollapse-margins:after
-{
-  content: "\00a0"; /* No-break space character */
-  display: block;
-  overflow: hidden;
-  height: 0;
 }

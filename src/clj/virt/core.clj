@@ -1,7 +1,6 @@
 (ns virt.core
-  (:require [compojure.handler :as handler]
-            [compojure.route :as route]
-            [compojure.core :as compojure :refer [GET POST DELETE ANY defroutes]]
+  (:require [compojure.route :as route]
+            [compojure.core :as compojure :refer [GET POST DELETE defroutes]]
             (ring.util [request :as req]
                        [response :as resp])
             (ring.middleware [params :refer [wrap-params]]
@@ -10,22 +9,21 @@
                              [session :refer [wrap-session]]
                              [resource :refer [wrap-resource]]
                              [content-type :refer [wrap-content-type]])
-            [aleph.http :refer :all]
-            [aleph.formats :refer :all]
-            [lamina.core :refer :all]
+            [aleph.http :as http]
             [korma.core :as korma]
             [korma.db :as db]
             [cemerick.friend :as friend]
             (cemerick.friend [workflows :as workflows]
-                             [credentials :as creds]
-                             [util :refer [gets]])))
+                             [credentials :as creds])
+            [virt.utils :refer [edn-response]]
+            [virt.chat :as chat]))
 
 
 (def apps
   {:chat {:link "/chat"}})
 
 
-(declare channels messages users)
+(declare channels users)
 
 (defn geoFromText [lon lat]
   (str "ST_GeographyFromText('SRID=4326;POINT(" lon " " lat ")')"))
@@ -42,18 +40,6 @@
       {:name channel-name
        :location (korma/raw (geoFromText lon lat))})))
 
-(defn get-messages [channel-id]
-  (korma/select messages
-    (korma/fields :username :message)
-    (korma/where {:channel_id channel-id})
-    (korma/order :id :ASC)))
-
-(defn add-msg [user channel-id msg]
-  (korma/insert messages
-    (korma/values {:username user
-                   :channel_id channel-id
-                   :message msg})))
-
 (defn get-user [{:keys [username]}]
   {:username username
    :roles #{::user}})
@@ -64,13 +50,6 @@
                    :password (creds/hash-bcrypt password)})))
 
 
-(defn edn-response
-  ([body]
-    (edn-response body 200))
-  ([body status]
-    {:status status
-     :headers {"Content-Type" "application/edn"}
-     :body (pr-str body)}))
 
 (defn apps-handler [request]
   (edn-response apps))
@@ -88,36 +67,6 @@
           geolocation (:geolocation body)]
       (add-channel (:channel-name body) (:lon geolocation) (:lat geolocation)))))
 
-(defn chat-messages-handler [request]
-  (edn-response
-    (let [params (:route-params request)
-          channel-id (Integer/parseInt (:channel-id params))]
-      (get-messages channel-id))))
-
-(defn chat-ws-handler [client-ch request]
-  (let [params (:route-params request)
-        channel-id (Integer/parseInt (:channel-id params))
-        broadcast-ch
-        (named-channel
-          (str channel-id)
-          (fn [new-ch]
-            (receive-all new-ch
-              (fn [[msg-type {:keys [username message]}]]
-                (case msg-type
-                  :message (add-msg username channel-id message))))))]
-    (enqueue client-ch (pr-str [:initial (vec (get-messages channel-id))]))
-    (siphon
-      (map* #(pr-str %) broadcast-ch)
-      client-ch)
-    (let [username (:username (friend/current-authentication request))]
-      (siphon
-        (map*
-          (fn [msg]
-            (let [[msg-type msg-data] (read-string msg)]
-              [msg-type (assoc msg-data :username username)]))
-          client-ch)
-        broadcast-ch))))
-
 (defn serve-page [page]
   (-> (resp/resource-response (str page ".html") {:root "public"})
       (resp/content-type "text/html")))
@@ -126,14 +75,11 @@
   (GET "/apps" [] apps-handler)
   (GET "/channels" [] channels-handler)
   (POST "/channels" [] new-channel-handler)
-  (GET "/chat/:channel-id" [] chat-messages-handler)
-  (GET "/chat/:channel-id/watch" []
-       (wrap-aleph-handler chat-ws-handler))
+
   ; TODO: aleph throwing exception
   (route/not-found "No such api path"))
 
 (defroutes page-routes
-  (GET "/chat*" [] (serve-page "chat"))
   (GET "/*" [] (serve-page "index")))
 
 (defn handle-session [request]
@@ -179,18 +125,16 @@
                   (dissoc :location)
                   (clojure.set/rename-keys {:id :channel-id})))))
 
-  (korma/defentity messages
-    (korma/transform
-      (fn [m] (-> m
-                  (clojure.set/rename-keys {:id :message-id
-                                            :channel_id :channel-id})))))
-
   (korma/defentity users
     (korma/transform #(assoc % :roles #{::user})))
 
-  (start-http-server
-    (wrap-ring-handler
+  (chat/set-up-db)
+
+  (http/start-http-server
+    (http/wrap-ring-handler
       (-> (compojure/routes session-routes
+                            (compojure/context "/api/chat" []
+                              (friend/wrap-authorize chat/routes #{::user}))
                             (compojure/context "/api" []
                               (friend/wrap-authorize api-routes #{::user}))
                             page-routes)

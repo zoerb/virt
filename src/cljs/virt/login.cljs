@@ -4,7 +4,7 @@
             [cljs-http.client :as http]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [virt.components :as comps]))
+            [virt.header :refer [header]]))
 
 
 (defn- login [_ owner {:keys [main-comm]}]
@@ -22,7 +22,7 @@
     (render-state [_ {:keys [comm]}]
       (dom/div nil
         (dom/div #js {:id "header"}
-          (om/build comps/header nil {:opts {:title "Virt"}}))
+          (om/build header nil {:opts {:title "Virt"}}))
         (dom/div #js {:id "content"}
           (dom/form #js {:className "login-form"}
             (dom/input #js {:ref "username-input" :placeholder "Username" :autoFocus true})
