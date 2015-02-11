@@ -4,35 +4,26 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs-http.client :as http]
-            [virt.history :refer [listen-navigation set-history-path!]]
-            [virt.router :refer [stack-to-path path-to-stack]]
+            [virt.router :refer [path-to-stack]]
             [virt.login :refer [mount-login]]
             [virt.components :as comps]))
 
 
 (def app-state
   (atom {:page-stack []
-         :threads {}
-         :messages {}}))
-
-(def home-route
-  [["/chat/" [#"\d+" :channel-id] [#".*" :rest]] :home])
-
-(def page-routes
-  ["" {"/new" :new
-       ["/" [#"\d+" :thread-id]] :thread}])
+         :messages []}))
 
 (def routes
-  [home-route page-routes])
+  [[["/chat/" [#"\d+" :channel-id]] :home]])
 
-(defn leaf-chat [messages owner {:keys [channel-id thread-id]}]
+(defn leaf-chat [messages owner {:keys [channel-id]}]
   (reify
     om/IInitState
     (init-state [_]
       {:should-scroll-to-bottom true})
     om/IWillMount
     (will-mount [_]
-      (let [wsUri (str "ws://" window.location.host "/api/chat/" channel-id "/threads/" thread-id "/watch")
+      (let [wsUri (str "ws://" window.location.host "/api/chat/" channel-id "/watch")
             ws (js/WebSocket. wsUri)
             comm (chan)]
         (set! (.-onmessage ws)
@@ -91,104 +82,23 @@
                        (set! (.-value message-input) "")))))}
           (dom/input #js {:ref "message-input"}))))))
 
-(defn chat-root [threads owner]
+(defn main [app owner]
   (reify
-    om/IRenderState
-    (render-state [_ {:keys [comm]}]
-      (apply dom/ul #js {:className "virt-list"}
-        (om/build-all
-          (fn [thread owner]
-            (reify
-              om/IRender
-              (render [_]
-                (dom/li #js {:onClick (fn [e] (put! comm [:navigate [:thread thread]]))}
-                        (:description thread)))))
-          threads)))))
-
-(defn new-thread [_ owner {:keys [channel-id]}]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [comm]}]
-      (dom/form #js {:className "new-thread-form"}
-        (dom/input #js {:ref "new-thread-input" :placeholder "Title" :autoFocus true})
-        (dom/button
-          #js {:className "transparent-button"
-               :onClick (fn [e]
-                          (.preventDefault e)
-                          (put! comm [:new-thread
-                                      {:channel-id channel-id
-                                       :descr (.-value (om/get-node owner "new-thread-input"))}]))}
-          "Create")))))
-
-(defn main [app owner {:keys [channel-id]}]
-  (reify
-    om/IInitState
-    (init-state [_]
-      {:comm (chan)})
-    om/IWillMount
-    (will-mount [_]
-      (let [nav-chan (listen-navigation)]
-        (go (while true
-          (let [stack (path-to-stack routes (<! nav-chan))
-                [page params] (peek stack)]
-            (if (= page :thread)
-              (om/update! app [:messages (:thread-id params)] []))
-            (om/update! app [:page-stack] stack)))))
-      (go (let [response (<! (http/get (str "/api/chat/" channel-id "/threads")))]
-            (om/update! app [:threads] (:body response))))
-      (let [comm (om/get-state owner :comm)]
-        (go (while true
-              (let [[msg data] (<! comm)]
-                (case msg
-                  ; TODO: remove/re-evaluate cursor derefs when upgrading to Om 0.8
-                  :navigate
-                  (let [page-stack (:page-stack @app)
-                        [nav-type page-params] data
-                        params (merge page-params (second (peek page-stack)))
-                        new-stack
-                        (case nav-type
-                          :back (pop page-stack)
-                          :new (conj page-stack [:new params])
-                          :thread
-                          (do
-                            (om/update! app [:messages (:thread-id params)] [])
-                            (conj page-stack [:thread params])))]
-                    (if (empty? new-stack)
-                      (set! (.-location js/window) "/")
-                      (do
-                        (om/update! app [:page-stack] new-stack)
-                        (set-history-path! (stack-to-path routes new-stack)))))
-                  :new-thread
-                  (let [response
-                        (<! (http/post (str "/api/chat/" (:channel-id data) "/threads")
-                                       {:edn-params {:thread-descr (:descr data)}}))]
-                    (om/transact! app [:threads] (fn [ts] (conj ts (:body response))))
-                    ; TODO: new-thread should probably be on a different channel than navigate
-                    (put! comm [:navigate [:back]]))
-                  nil))))))
-    om/IRenderState
-    (render-state [_ {:keys [comm]}]
+    om/IRender
+    (render [_]
       (let [page-stack (:page-stack app)
-            [page params] (peek page-stack)
-            m {:init-state {:comm comm}
-               :opts params}]
+            [page params] (peek page-stack)]
         (dom/div nil
           (dom/div #js {:id "header"}
             (om/build comps/header app
               {:opts {:title "Chat"
                       :left-button {:show true
                                     :text "Back"
-                                    :onClick #(put! comm [:navigate [:back]])}
-                      :right-button {:show (= page :home)
-                                     :text "New"
-                                     :onClick #(put! comm [:navigate [:new]])}}}))
+                                    :onClick #(set! (.-location js/window) "/")}}}))
           (dom/div #js {:id "content"}
-            (case page
-              :home (om/build chat-root (:threads app) m)
-              :new (om/build new-thread nil m)
-              :thread (om/build leaf-chat
-                                (get (:messages app) (:thread-id params))
-                                m))))))))
+            (om/build leaf-chat
+                      (:messages app)
+                      {:opts params})))))))
 
 (let [stack (path-to-stack routes (.. js/document -location -pathname))
       [_ home-params] (stack 0)
@@ -197,8 +107,5 @@
     (let [response (<! (http/get "/api/session"))]
       (if (= (:body response) :no-active-session)
         (<! (mount-login))))
-    (if (= page :thread)
-      (swap! app-state update-in [:messages] assoc (:thread-id params) []))
     (swap! app-state assoc :page-stack stack)
-    (om/root main app-state {:target (.getElementById js/document "app")
-                             :opts home-params})))
+    (om/root main app-state {:target (.getElementById js/document "app")})))

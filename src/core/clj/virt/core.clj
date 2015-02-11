@@ -27,7 +27,7 @@
   {:chat {:link "/chat"}})
 
 
-(declare channels threads messages users)
+(declare channels messages users)
 
 (defn geoFromText [lon lat]
   (str "ST_GeographyFromText('SRID=4326;POINT(" lon " " lat ")')"))
@@ -44,28 +44,16 @@
       {:name channel-name
        :location (korma/raw (geoFromText lon lat))})))
 
-(defn get-threads [channel-id]
-  (korma/select threads
-    (korma/where {:channel_id channel-id})
-    (korma/order :id :DESC)))
-
-(defn add-chat-thread [channel-id thread-descr]
-  (korma/insert threads
-    (korma/values {:channel_id channel-id
-                   :description thread-descr})))
-
-(defn get-messages [channel-id thread-id]
+(defn get-messages [channel-id]
   (korma/select messages
     (korma/fields :username :message)
-    (korma/where {:channel_id channel-id
-                  :thread_id thread-id})
+    (korma/where {:channel_id channel-id})
     (korma/order :id :ASC)))
 
-(defn add-msg [user channel-id thread-id msg]
+(defn add-msg [user channel-id msg]
   (korma/insert messages
     (korma/values {:username user
                    :channel_id channel-id
-                   :thread_id thread-id
                    :message msg})))
 
 (defn get-user [{:keys [username]}]
@@ -102,39 +90,24 @@
           geolocation (:geolocation body)]
       (add-channel (:channel-name body) (:lon geolocation) (:lat geolocation)))))
 
-(defn chat-threads-handler [request]
-  (edn-response
-    (let [params (:route-params request)
-          channel-id (Integer/parseInt (:channel-id params))]
-      (get-threads channel-id))))
-
-(defn new-chat-thread-handler [request]
-  (edn-response
-    (let [params (:route-params request)
-          channel-id (Integer/parseInt (:channel-id params))
-          body (read-string (slurp (:body request)))]
-      (add-chat-thread channel-id (:thread-descr body)))))
-
 (defn chat-messages-handler [request]
   (edn-response
     (let [params (:route-params request)
-          channel-id (Integer/parseInt (:channel-id params))
-          thread-id (Integer/parseInt (:thread-id params))]
-      (get-messages channel-id thread-id))))
+          channel-id (Integer/parseInt (:channel-id params))]
+      (get-messages channel-id))))
 
-(defn chat-thread-ws-handler [client-ch request]
+(defn chat-ws-handler [client-ch request]
   (let [params (:route-params request)
         channel-id (Integer/parseInt (:channel-id params))
-        thread-id (Integer/parseInt (:thread-id params))
         broadcast-ch
         (named-channel
-          (str channel-id "/" thread-id)
+          (str channel-id)
           (fn [new-ch]
             (receive-all new-ch
               (fn [[msg-type {:keys [username message]}]]
                 (case msg-type
-                  :message (add-msg username channel-id thread-id message))))))]
-    (enqueue client-ch (pr-str [:initial (vec (get-messages channel-id thread-id))]))
+                  :message (add-msg username channel-id message))))))]
+    (enqueue client-ch (pr-str [:initial (vec (get-messages channel-id))]))
     (siphon
       (map* #(pr-str %) broadcast-ch)
       client-ch)
@@ -156,11 +129,9 @@
   (GET "/apps" [] apps-handler)
   (GET "/channels" [] channels-handler)
   (POST "/channels" [] new-channel-handler)
-  (GET "/chat/:channel-id/threads" [] chat-threads-handler)
-  (POST "/chat/:channel-id/threads" [] new-chat-thread-handler)
-  (GET "/chat/:channel-id/threads/:thread-id" [] chat-messages-handler)
-  (GET ["/chat/:channel-id/threads/:thread-id/watch", :thread-id #"[0-9A-Za-z]+"] {}
-       (wrap-aleph-handler chat-thread-ws-handler))
+  (GET "/chat/:channel-id" [] chat-messages-handler)
+  (GET "/chat/:channel-id/watch" []
+       (wrap-aleph-handler chat-ws-handler))
   ; TODO: aleph throwing exception
   (route/not-found "No such api path"))
 
@@ -211,16 +182,10 @@
                   (dissoc :location)
                   (clojure.set/rename-keys {:id :channel-id})))))
 
-  (korma/defentity threads
-    (korma/transform
-      (fn [t] (clojure.set/rename-keys t {:id :thread-id
-                                          :channel_id :channel-id}))))
-
   (korma/defentity messages
     (korma/transform
       (fn [m] (-> m
                   (clojure.set/rename-keys {:id :message-id
-                                            :thread_id :thread-id
                                             :channel_id :channel-id})))))
 
   (korma/defentity users
