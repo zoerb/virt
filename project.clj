@@ -40,4 +40,5 @@
                 :optimizations :advanced
                 :pretty-print false
                 :closure-warnings {:non-standard-jsdoc :off}}}}}
+  :clean-targets ^{:protect false} [:target-path "resources/public/js"]
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]})
