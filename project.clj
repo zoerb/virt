@@ -22,7 +22,8 @@
                    :main virt.dev}
              :prod {:main virt.core}}
   :aliases {"build-dev" ["cljsbuild" "auto" "dev"]
-            "build-prod" ["cljsbuild" "once" "prod"]}
+            "build-prod" ["cljsbuild" "once" "prod"]
+            "run-prod" ["with-profiles" "-dev,+prod" "run"]}
   :cljsbuild {
     :builds {:dev
              {:source-paths ["src/cljs" "dev/cljs"]
