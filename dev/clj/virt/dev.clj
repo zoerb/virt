@@ -1,7 +1,7 @@
 (ns virt.dev
   (:require [virt.core]
-            [cljs.repl.browser]
             [cemerick.piggieback]
+            [weasel.repl.websocket]
             [clojure.tools.namespace.repl :as ctnr]))
 
 ; Don't reload the virt.dev ns
@@ -9,7 +9,7 @@
 
 (defn start-cljs-repl []
   (cemerick.piggieback/cljs-repl
-    :repl-env (cljs.repl.browser/repl-env :port 9000)))
+    :repl-env (weasel.repl.websocket/repl-env :ip "0.0.0.0" :port 9001)))
 
 (def system
   {:server (atom nil)})

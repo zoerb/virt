@@ -1,6 +1,6 @@
 (ns virt.dev
   (:require [virt.main]
-            [clojure.browser.repl :as repl]))
+            [weasel.repl :as repl]))
 
-(enable-console-print!)
-(repl/connect "http://localhost:9000/repl")
+(when-not (repl/alive?)
+  (repl/connect "ws://localhost:9001" :print :console))
