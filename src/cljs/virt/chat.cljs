@@ -76,11 +76,11 @@
                        (set! (.-value message-input) "")))))}
           (dom/input #js {:ref "message-input"}))))))
 
-(defn main [app owner params]
+(defn main [data owner params]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:id "content"}
         (om/build leaf-chat
-                  (:messages app)
+                  (:messages data)
                   {:opts params})))))

@@ -3,7 +3,7 @@
             [om.dom :as dom :include-macros true]))
 
 
-(defn header [app owner {:keys [title left-button right-button]}]
+(defn header [data owner {:keys [title left-button right-button]}]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
