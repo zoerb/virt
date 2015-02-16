@@ -32,14 +32,14 @@
               :compiler {
                 :main virt.dev
                 :output-dir "resources/public/js/out"
-                :output-to "resources/public/js/main.js"
+                :output-to "resources/public/js/virt.js"
                 :asset-path "/js/out"
                 :source-map true
                 :optimizations :none}}
              :prod
              {:source-paths ["src/cljs"]
               :compiler {
-                :output-to "resources/public/js/main.js"
+                :output-to "resources/public/js/virt.js"
                 :optimizations :advanced
                 :pretty-print false
                 :closure-warnings {:non-standard-jsdoc :off}}}}}

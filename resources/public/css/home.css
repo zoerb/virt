@@ -1,0 +1,29 @@
+.virt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background-color: white;
+}
+
+.virt-list > li {
+  padding: 14px;
+  cursor: pointer;
+}
+
+.virt-list > li, header {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.virt-list > li .name {
+  margin-bottom: 4px;
+}
+
+.virt-list > li .aux {
+  font-size: 14px;
+  color: #999;
+}
+
+#loading {
+  text-align: center;
+  padding-top: 26px;
+}

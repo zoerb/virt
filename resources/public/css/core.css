@@ -89,54 +89,17 @@ input {
   border-radius: 6px;
 }
 
-.new-channel-form, .login-form {
+.full-width-form {
   width: 100%;
   text-align: center;
   padding: 40px 0;
 }
-.new-channel-form input, .login-form input {
+.full-width-form input {
   width: 90%;
   padding: 6px;
   margin-bottom: 6px;
 }
-.new-channel-form button, .login-form button {
+.full-width-form button {
   display: block;
   margin: 15px auto;
-}
-
-.virt-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  background-color: white;
-}
-
-.virt-list > li {
-  padding: 14px;
-  cursor: pointer;
-}
-
-.virt-list > li, header {
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.virt-list > li .name {
-  margin-bottom: 4px;
-}
-
-.virt-list > li .aux {
-  font-size: 14px;
-  color: #999;
-}
-
-.list-link:hover, .list-link:visited, .list-link:link, .list-link:active {
-  text-decoration: none;
-}
-.list-link:hover, .list-link:visited, .list-link:link, .list-link:active {
-  color: inherit;
-}
-
-#loading {
-  text-align: center;
-  padding-top: 26px;
 }

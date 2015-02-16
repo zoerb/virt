@@ -22,9 +22,9 @@
     (render-state [_ {:keys [comm]}]
       (dom/div nil
         (dom/div #js {:id "header"}
-          (om/build header nil {:opts {:title "Virt"}}))
+          (om/build header {:title "Virt"}))
         (dom/div #js {:id "content"}
-          (dom/form #js {:className "login-form"}
+          (dom/form #js {:className "full-width-form"}
             (dom/input #js {:ref "username-input" :placeholder "Username" :autoFocus true})
             (dom/button
               #js {:className "transparent-button"

@@ -1,5 +1,5 @@
 (ns virt.dev
-  (:require [virt.main]
+  (:require [virt.core]
             [weasel.repl :as repl]))
 
 (when-not (repl/alive?)

@@ -10,14 +10,14 @@
 
 (def app-state {:messages []})
 
-(defn leaf-chat [messages owner {:keys [channel-id]}]
+(defn leaf-chat [{:keys [params messages]} owner]
   (reify
     om/IInitState
     (init-state [_]
       {:should-scroll-to-bottom true})
     om/IWillMount
     (will-mount [_]
-      (let [wsUri (str "ws://" window.location.host "/api/chat/" channel-id "/watch")
+      (let [wsUri (str "ws://" window.location.host "/api/chat/" (:channel-id params) "/watch")
             ws (js/WebSocket. wsUri)
             comm (chan)]
         (set! (.-onmessage ws)
@@ -39,7 +39,8 @@
         (.scrollIntoView (om/get-node owner "leaf-chat") false)))
     om/IWillUnmount
     (will-unmount [_]
-      (go (>! (om/get-state owner :comm) [:close])))
+      (go (>! (om/get-state owner :comm) [:close]))
+      (om/update! messages []))
     om/IWillUpdate
     (will-update [_ _ _]
       (om/set-state-nr! owner
@@ -76,11 +77,11 @@
                        (set! (.-value message-input) "")))))}
           (dom/input #js {:ref "message-input"}))))))
 
-(defn main [data owner params]
+(defn main [{:keys [page params data]} owner]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:id "content"}
         (om/build leaf-chat
-                  (:messages data)
-                  {:opts params})))))
+                  {:params params
+                   :messages (:messages data)})))))

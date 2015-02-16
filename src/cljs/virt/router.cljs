@@ -3,9 +3,9 @@
             [cljs.reader]))
 
 
-; [[:home {}]]                              <=> "/"
-; [[:home {}] [:new {}]]                    <=> "/new"
-; [[:home {}] [:chat/home {:channel-id 1}]] <=> "/chat/1"
+; [[:home/home {}]]                              <=> "/"
+; [[:home/home {}] [:home/new {}]]               <=> "/new"
+; [[:home/home {}] [:chat/home {:channel-id 1}]] <=> "/chat/1"
 
 ; Hack - should be converted when matching route
 (defn- convert-if-number [string]
