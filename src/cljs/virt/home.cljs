@@ -8,7 +8,7 @@
 
 
 (def app-state
-  {:channels {}
+  {:channels []
    :geolocation nil})
 
 (def routes ["new" ::new])
@@ -29,38 +29,26 @@
 
 (defn channel-list [{:keys [params data]} owner]
   (reify
-    om/IInitState
-    (init-state [_]
-      {:loading false})
     om/IWillMount
     (will-mount [_]
-      (when (empty? (:channels data))
-        (om/set-state! owner :loading true))
       (om/set-state! owner :interval-chan
         (go
-          (let [loc (<! (get-geolocation))]
-            (om/update! data [:geolocation] loc)
-            (let [response (<! (http/get "/api/channels" {:query-params loc}))]
-              (om/update! data [:channels] (:body response)))
-            (om/set-state! owner :loading false)
-            (js/setInterval
-              #(go
-                 ;(let [loc (<! (get-geolocation))]
-                 ;  (om/update! data [:geolocation] loc)
-                   (let [response (<! (http/get "/api/channels" {:query-params loc}))]
-                     (om/update! data [:channels] (:body response))))
-              3000)))))
+          (let [response (<! (http/get "/api/channels" {:query-params (:geolocation data)}))]
+            (om/update! data [:channels] (:body response)))
+          (js/setInterval
+            #(go
+               (let [response (<! (http/get "/api/channels" {:query-params (:geolocation data)}))]
+                 (om/update! data [:channels] (:body response))))
+            3000))))
     om/IWillUnmount
     (will-unmount [_]
       (go
         (js/clearInterval (<! (om/get-state owner :interval-chan)))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (if (om/get-state owner :loading)
-        (om/build loading nil)
-        (dom/div nil
-          (apply dom/ul #js {:className "virt-list"}
-            (om/build-all list-item (:channels data) {:init-state {:comm comm}})))))))
+      (dom/div nil
+        (apply dom/ul #js {:className "virt-list"}
+          (om/build-all list-item (:channels data) {:init-state {:comm comm}}))))))
 
 (defn new-channel [_ owner]
   (reify
@@ -80,12 +68,19 @@
   (reify
     om/IInitState
     (init-state [_]
-      {:comm (chan)})
+      {:comm (chan)
+       :loading false})
     om/IWillMount
     (will-mount [_]
-      (let [comm (om/get-state owner :comm)
-            core-comm (om/get-state owner :core-comm)]
-        (go
+      (when (empty? (:geolocation data))
+        (om/set-state! owner :loading true))
+      (go
+        (let [loc (<! (get-geolocation))]
+          (om/update! data [:geolocation] loc))
+        (om/set-state! owner :loading false))
+      (go
+        (let [comm (om/get-state owner :comm)
+              core-comm (om/get-state owner :core-comm)]
           (while true
             (let [[msg msg-data] (<! comm)]
               (case msg
@@ -101,6 +96,8 @@
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (let [m {:init-state {:comm comm}}]
-        (case page
-          ::new (om/build new-channel nil m)
-          ::home (om/build channel-list {:params params :data data} m))))))
+        (if (om/get-state owner :loading)
+          (om/build loading nil)
+          (case page
+            ::new (om/build new-channel nil m)
+            ::home (om/build channel-list {:params params :data data} m)))))))
