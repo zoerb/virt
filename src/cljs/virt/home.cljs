@@ -36,23 +36,24 @@
     (will-mount [_]
       (when (empty? (:channels data))
         (om/set-state! owner :loading true))
-      (go
-        (let [loc (<! (get-geolocation))]
-          (om/update! data [:geolocation] loc)
-          (let [response (<! (http/get "/api/channels" {:query-params loc}))]
-            (om/update! data [:channels] (:body response))))
-        (om/set-state! owner :loading false)
-        (om/set-state! owner :poll-interval
-          (js/setInterval
-            #(go
-               (let [loc (<! (get-geolocation))]
-                 (om/update! data [:geolocation] loc)
-                 (let [response (<! (http/get "/api/channels" {:query-params loc}))]
-                   (om/update! data [:channels] (:body response)))))
-            3000))))
+      (om/set-state! owner :interval-chan
+        (go
+          (let [loc (<! (get-geolocation))]
+            (om/update! data [:geolocation] loc)
+            (let [response (<! (http/get "/api/channels" {:query-params loc}))]
+              (om/update! data [:channels] (:body response)))
+            (om/set-state! owner :loading false)
+            (js/setInterval
+              #(go
+                 ;(let [loc (<! (get-geolocation))]
+                 ;  (om/update! data [:geolocation] loc)
+                   (let [response (<! (http/get "/api/channels" {:query-params loc}))]
+                     (om/update! data [:channels] (:body response))))
+              3000)))))
     om/IWillUnmount
     (will-unmount [_]
-      (js/clearInterval (om/get-state owner :poll-interval)))
+      (go
+        (js/clearInterval (<! (om/get-state owner :interval-chan)))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (if (om/get-state owner :loading)
