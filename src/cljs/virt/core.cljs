@@ -6,7 +6,6 @@
             [cljs-http.client :as http]
             [virt.history :refer [listen-navigation set-history-path!]]
             [virt.router :refer [stack-to-path path-to-stack]]
-            [virt.login :refer [mount-login]]
             [virt.header :refer [header]]
             [virt.home :as home]
             [virt.chat :as chat]))
@@ -18,8 +17,32 @@
 
 (def routes
   [[["/" [#".*" :rest]] :virt.home/home]
-   ["" [home/routes
+   ["" [["login" :virt.core/login]
+        home/routes
         chat/routes]]])
+
+(defn login [_ owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:comm (chan)})
+    om/IWillMount
+    (will-mount [_]
+      (let [comm (om/get-state owner :comm)]
+        (go
+          (<! (http/post "/api/session" {:form-params {:username (<! comm)}}))
+          (>! (om/get-state owner :core-comm) [:navigate [:back]]))))
+    om/IRenderState
+    (render-state [_ {:keys [comm]}]
+      (dom/div #js {:id "content"}
+        (dom/form #js {:className "full-width-form"}
+          (dom/input #js {:ref "username-input" :placeholder "Username" :autoFocus true})
+          (dom/button
+            #js {:className "transparent-button"
+                 :onClick (fn [e]
+                            (.preventDefault e)
+                            (put! comm (.-value (om/get-node owner "username-input"))))}
+            "Login"))))))
 
 (defn main [data owner]
   (reify
@@ -58,7 +81,7 @@
           (dom/div #js {:id "header"}
             (om/build header
               {:title "Virt"
-               :left-button {:show (not (= page :virt.home/home))
+               :left-button {:show (not (or (= page :virt.home/home) (= page :virt.core/login)))
                              :text "Back"
                              :onClick #(put! comm [:navigate [:back]])}
                :right-button {:show (= page :virt.home/home)
@@ -68,16 +91,16 @@
             (let [app (keyword (namespace page))
                   cursor {:page page :params params :data (get data app)}]
               (case app
+                :virt.core (om/build login nil m)
                 :virt.home (om/build home/main cursor m)
                 :virt.chat (om/build chat/main cursor m)
                 nil))))))))
 
 (go
-  ; TODO: do authentication after mounting and make login a page instead of a new root
-  (let [response (<! (http/get "/api/session"))]
-    (if (= (:body response) :no-active-session)
-      (<! (mount-login))))
-  (let [stack (path-to-stack routes (.. js/document -location -pathname))]
-    ;(swap! app-state assoc :page-stack stack)
-    (om/root main app-state {:target (.getElementById js/document "app")
-                             :init-state {:page-stack stack}})))
+  (let [path-stack (path-to-stack routes (.. js/document -location -pathname))
+        response (<! (http/get "/api/session"))
+        stack (if (= (:body response) :no-active-session)
+                (conj path-stack [:virt.core/login])
+                path-stack)]
+  (om/root main app-state {:target (.getElementById js/document "app")
+                           :init-state {:page-stack stack}})))
