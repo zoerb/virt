@@ -13,35 +13,22 @@
     (cljs.reader/read-string match)
     string))
 
+(defn frame-to-path [routes [page params]]
+  (apply bidi/path-for routes page (apply concat params)))
+
 (defn stack-to-path [routes stack]
-  (loop [stack (seq stack)
-         routes (seq routes)
-         path ""]
-    (if (empty? stack)
-      path
-      (let [[page-type params] (first stack)]
-        (recur
-          (rest stack)
-          (rest routes)
-          (str path
-               (apply bidi/path-for
-                      (first routes)
-                      page-type
-                      (apply concat (assoc params :rest "")))))))))
+  (frame-to-path routes (last stack)))
+
+(defn- path-to-frame [routes path]
+  (let [match (bidi/match-route routes path)
+        params (:route-params match)
+        converted-params (into {} (map (fn [[k v]] [k (convert-if-number v)])) params)]
+    [(:handler match) converted-params]))
 
 (defn path-to-stack [routes path]
-  (loop [path path
-         routes routes
-         prev-params {}
-         stack []]
-    (if (empty? path)
-      stack
-      (let [match (bidi/match-route (first routes) path)
-            params (:route-params match)
-            converted-params (map (fn [[k v]] [k (convert-if-number v)]) (dissoc params :rest))
-            all-params (merge prev-params converted-params)]
-        (recur
-          (:rest params)
-          (rest routes)
-          all-params
-          (conj stack [(:handler match) all-params]))))))
+  (let [home-frame [:virt.home/home]
+        path-frame (path-to-frame routes (.. js/document -location -pathname))
+        stack (if (= (first path-frame) (first home-frame))
+                [home-frame]
+                [home-frame path-frame])]
+    stack))

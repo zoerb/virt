@@ -16,10 +16,10 @@
          :virt.chat chat/app-state}))
 
 (def routes
-  [[["/" [#".*" :rest]] :virt.home/home]
-   ["" [["login" :virt.core/login]
-        home/routes
-        chat/routes]]])
+  ["/" [["" :virt.home/home]
+        ["login" :virt.core/login]
+        virt.home/routes
+        virt.chat/routes]])
 
 (defn login [_ owner]
   (reify
