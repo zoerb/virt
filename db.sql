@@ -12,6 +12,7 @@ CREATE SEQUENCE channels_id_seq;
 CREATE TABLE channels (
     id integer DEFAULT nextval('channels_id_seq') PRIMARY KEY,
     name text NOT NULL,
+    channel_type text NOT NULL,
     location geography(POINT,4326)
 );
 ALTER SEQUENCE channels_id_seq OWNED BY channels.id;

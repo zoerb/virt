@@ -16,11 +16,8 @@
             (cemerick.friend [workflows :as workflows]
                              [credentials :as creds])
             [virt.utils :refer [edn-response]]
-            [virt.chat :as chat]))
-
-
-(def apps
-  {:chat {:link "/chat"}})
+            [virt.chat :as chat]
+            [virt.poll :as poll]))
 
 
 (declare channels users)
@@ -34,10 +31,11 @@
       (korma/raw (str "ST_DWithin(location," (geoFromText lon lat) ",200)")))
     (korma/order :id :DESC)))
 
-(defn add-channel [channel-name lon lat]
+(defn add-channel [channel-name channel-type lon lat]
   (korma/insert channels
     (korma/values
       {:name channel-name
+       :channel_type channel-type
        :location (korma/raw (geoFromText lon lat))})))
 
 (defn get-user [{:keys [username]}]
@@ -48,11 +46,6 @@
   (korma/insert users
     (korma/values {:username username
                    :password (creds/hash-bcrypt password)})))
-
-
-
-(defn apps-handler [request]
-  (edn-response apps))
 
 (defn channels-handler [request]
   (edn-response
@@ -65,14 +58,13 @@
   (edn-response
     (let [body (read-string (slurp (:body request)))
           geolocation (:geolocation body)]
-      (add-channel (:channel-name body) (:lon geolocation) (:lat geolocation)))))
+      (add-channel (:channel-name body) (:channel-type body) (:lon geolocation) (:lat geolocation)))))
 
 (defn serve-page [page]
   (-> (resp/resource-response (str page ".html") {:root "public"})
       (resp/content-type "text/html")))
 
 (defroutes api-routes
-  (GET "/apps" [] apps-handler)
   (GET "/channels" [] channels-handler)
   (POST "/channels" [] new-channel-handler)
 
@@ -121,20 +113,24 @@
   (korma/defentity channels
     (korma/transform
       (fn [c] (-> c
-                  (assoc :app :chat)
                   (dissoc :location)
+                  (assoc :channel-type (keyword (:channel_type c)))
+                  (dissoc :channel_type)
                   (clojure.set/rename-keys {:id :channel-id})))))
 
   (korma/defentity users
     (korma/transform #(assoc % :roles #{::user})))
 
   (chat/set-up-db)
+  (poll/set-up-db)
 
   (http/start-http-server
     (http/wrap-ring-handler
       (-> (compojure/routes session-routes
                             (compojure/context "/api/chat" []
                               (friend/wrap-authorize chat/routes #{::user}))
+                            (compojure/context "/api/poll" []
+                              (friend/wrap-authorize poll/routes #{::user}))
                             (compojure/context "/api" []
                               (friend/wrap-authorize api-routes #{::user}))
                             page-routes)

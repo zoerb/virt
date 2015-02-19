@@ -6,13 +6,24 @@
             [cljs-http.client :as http]
             [virt.header :refer [header]]
             [virt.home :as home]
-            [virt.chat :as chat]))
+            [virt.chat :as chat]
+            [virt.poll :as poll]))
 
 
-(def app-state
-  (atom {:virt.home home/app-state
-         :virt.chat chat/app-state}))
+(def state
+  (atom {:home virt.home/app-state}))
 
+(def channel-types
+  (atom {}))
+
+(defn add-channel-type [id app-name app-state render-func]
+  (swap! state assoc id app-state)
+  (swap! channel-types
+         assoc id {:name app-name
+                   :render-func render-func}))
+
+(add-channel-type :chat "Chat" virt.chat/app-state virt.chat/main)
+(add-channel-type :poll "Poll" virt.poll/app-state virt.poll/main)
 
 (defn login [_ owner]
   (reify
@@ -49,47 +60,44 @@
           (while true
             (let [[msg msg-data] (<! comm)]
               (case msg
-                ; TODO: remove/re-evaluate cursor derefs when upgrading to Om 0.8
                 :navigate
                 (let [page-stack (om/get-state owner [:page-stack])
                       [nav-type new-frame] msg-data
                       new-stack
                       (case nav-type
                         :back (pop page-stack)
-                        :push
-                        (let [[page page-params] new-frame]
-                          (conj page-stack [page page-params])))]
+                        :push (conj page-stack new-frame))]
                   (om/set-state! owner [:page-stack] new-stack))
                 nil))))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (let [page-stack (om/get-state owner :page-stack)
-            [page params] (peek page-stack)
+            [app page params] (peek page-stack)
             m {:init-state {:core-comm comm}}]
         (dom/div nil
           (dom/div #js {:id "header"}
             (om/build header
               {:title "Virt"
-               :left-button {:show (not (or (= page :virt.home/home) (= page :virt.core/login)))
+               :left-button {:show true #_(not (or (= app :home) (= page :core)))
                              :text "Back"
                              :onClick #(put! comm [:navigate [:back]])}
-               :right-button {:show (= page :virt.home/home)
+               :right-button {:show (= app :home)
                               :text "New"
-                              :onClick #(put! comm [:navigate [:push [:virt.home/new]]])}}))
+                              :onClick #(put! comm [:navigate [:push [:home :new]]])}}))
           (dom/div #js {:id "content"}
-            (let [app (keyword (namespace page))
-                  cursor {:page page :params params :data (get data app)}]
+            (let [cursor {:page page :params params :data (get data app)}]
               (case app
-                :virt.core (om/build login nil m)
-                :virt.home (om/build home/main cursor m)
-                :virt.chat (om/build chat/main cursor m)
-                nil))))))))
+                :core (om/build login nil m)
+                :home (om/build virt.home/main
+                                cursor
+                                (assoc m :opts {:channel-types @channel-types}))
+                (om/build (:render-func (get @channel-types app)) cursor m)))))))))
 
 (go
-  (let [initial-stack [[:virt.home/home]]
+  (let [initial-stack [[:home :home]]
         response (<! (http/get "/api/session"))
         stack (if (= (:body response) :no-active-session)
-                (conj initial-stack [:virt.core/login])
+                (conj initial-stack [:core :login])
                 initial-stack)]
-  (om/root main app-state {:target (.getElementById js/document "app")
-                           :init-state {:page-stack stack}})))
+  (om/root main state {:target (.getElementById js/document "app")
+                       :init-state {:page-stack stack}})))

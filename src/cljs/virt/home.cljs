@@ -8,7 +8,8 @@
 
 
 (def app-state
-  {:channels []
+  {:channel-types {}
+   :channels []
    :geolocation nil})
 
 (defn loading [_ _]
@@ -17,15 +18,15 @@
     (render [_]
       (dom/div #js {:id "loading"} "Loading..."))))
 
-(defn list-item [channel owner]
+(defn list-item [channel owner {:keys [channel-types]}]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (dom/li #js {:onClick (fn [e] (put! comm [:navigate [:push [:virt.chat/home channel]]]))}
+      (dom/li #js {:onClick (fn [e] (put! comm [:navigate [:push [(:channel-type channel) :home channel]]]))}
         (dom/div #js {:className "name"} (:name channel))
-        (dom/div #js {:className "aux"} (name (:app channel)))))))
+        (dom/div #js {:className "aux"} (:name ((:channel-type channel) channel-types)))))))
 
-(defn channel-list [{:keys [params data]} owner]
+(defn channel-list [{:keys [params data]} owner {:keys [channel-types]}]
   (reify
     om/IWillMount
     (will-mount [_]
@@ -46,23 +47,28 @@
     (render-state [_ {:keys [comm]}]
       (dom/div nil
         (apply dom/ul #js {:className "virt-list"}
-          (om/build-all list-item (:channels data) {:init-state {:comm comm}}))))))
+          (om/build-all list-item (:channels data) {:init-state {:comm comm}
+                                                    :opts {:channel-types channel-types}}))))))
 
-(defn new-channel [_ owner]
+(defn new-channel [_ owner {:keys [channel-types]}]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/form #js {:className "full-width-form"}
-        (dom/input #js {:ref "new-channel-input" :placeholder "Title" :autoFocus true})
+        (dom/input #js {:ref "channel-name" :placeholder "Title" :autoFocus true})
+        (apply dom/select #js {:ref "channel-type" :id "channel-type-select" :size 4}
+          (map (fn [[id ch-type]] (dom/option #js {:value (name id)} (:name ch-type)))
+               channel-types))
         (dom/button
           #js {:className "transparent-button"
                :onClick (fn [e]
                           (.preventDefault e)
                           (put! comm [:new-channel
-                                      (.-value (om/get-node owner "new-channel-input"))]))}
+                                      [(.-value (om/get-node owner "channel-name"))
+                                       (.-value (om/get-node owner "channel-type"))]]))}
           "Create")))))
 
-(defn main [{:keys [page params data]} owner]
+(defn main [{:keys [page params data]} owner opts]
   (reify
     om/IInitState
     (init-state [_]
@@ -86,16 +92,18 @@
                 :new-channel
                 (let [response
                       (<! (http/post "/api/channels"
-                                     {:edn-params {:channel-name msg-data
+                                     {:edn-params {:channel-name (first msg-data)
+                                                   :channel-type (second msg-data)
                                                    :geolocation (:geolocation @data)}}))]
                   (om/transact! data [:channels] (fn [cs] (conj cs (:body response))))
                   (put! comm [:navigate [:back]]))
                 (>! core-comm [msg msg-data])))))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
-      (let [m {:init-state {:comm comm}}]
+      (let [m {:init-state {:comm comm}
+               :opts opts}]
         (if (om/get-state owner :loading)
           (om/build loading nil)
           (case page
-            ::new (om/build new-channel nil m)
-            ::home (om/build channel-list {:params params :data data} m)))))))
+            :new (om/build new-channel nil m)
+            :home (om/build channel-list {:params params :data data} m)))))))

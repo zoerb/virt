@@ -27,3 +27,14 @@
   text-align: center;
   padding-top: 26px;
 }
+
+#channel-type-select {
+  -webkit-appearance: none;
+  border: 1px solid #d0d0d0;
+  padding: 14px;
+  border-radius: 6px;
+  font-size: inherit;
+  font-family: inherit;
+  width: 90%;
+  text-align: center;
+}
