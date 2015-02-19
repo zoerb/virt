@@ -11,8 +11,6 @@
   {:channels []
    :geolocation nil})
 
-(def routes ["new" ::new])
-
 (defn loading [_ _]
   (reify
     om/IRender

@@ -12,7 +12,6 @@
                  [compojure "1.3.1"]
                  [cljs-http "0.1.21"]
                  [aleph "0.3.2"]
-                 [bidi "1.12.0"]
                  [org.omcljs/om "0.8.8"]
                  [com.cemerick/friend "0.2.1" :exclusions [org.clojure/core.cache]]]
   :plugins [[lein-cljsbuild "1.0.4"]]

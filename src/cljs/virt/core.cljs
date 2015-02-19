@@ -4,8 +4,6 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs-http.client :as http]
-            [virt.history :refer [listen-navigation set-history-path!]]
-            [virt.router :refer [stack-to-path path-to-stack]]
             [virt.header :refer [header]]
             [virt.home :as home]
             [virt.chat :as chat]))
@@ -15,11 +13,6 @@
   (atom {:virt.home home/app-state
          :virt.chat chat/app-state}))
 
-(def routes
-  ["/" [["" :virt.home/home]
-        ["login" :virt.core/login]
-        virt.home/routes
-        virt.chat/routes]])
 
 (defn login [_ owner]
   (reify
@@ -51,9 +44,6 @@
       {:comm (chan)})
     om/IWillMount
     (will-mount [_]
-      (let [nav-chan (listen-navigation)]
-        (go (while true
-          (om/set-state! owner [:page-stack] (path-to-stack routes (<! nav-chan))))))
       (let [comm (om/get-state owner :comm)]
         (go
           (while true
@@ -69,8 +59,7 @@
                         :push
                         (let [[page page-params] new-frame]
                           (conj page-stack [page page-params])))]
-                  (om/set-state! owner [:page-stack] new-stack)
-                  (set-history-path! (stack-to-path routes new-stack)))
+                  (om/set-state! owner [:page-stack] new-stack))
                 nil))))))
     om/IRenderState
     (render-state [_ {:keys [comm]}]
@@ -97,10 +86,10 @@
                 nil))))))))
 
 (go
-  (let [path-stack (path-to-stack routes (.. js/document -location -pathname))
+  (let [initial-stack [[:virt.home/home]]
         response (<! (http/get "/api/session"))
         stack (if (= (:body response) :no-active-session)
-                (conj path-stack [:virt.core/login])
-                path-stack)]
+                (conj initial-stack [:virt.core/login])
+                initial-stack)]
   (om/root main app-state {:target (.getElementById js/document "app")
                            :init-state {:page-stack stack}})))

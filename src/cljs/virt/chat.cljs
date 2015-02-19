@@ -6,8 +6,6 @@
             [om.dom :as dom :include-macros true]))
 
 
-(def routes [["chat/" [#"\d+" :channel-id]] ::home])
-
 (def app-state {:messages []})
 
 (defn leaf-chat [{:keys [params messages]} owner]
