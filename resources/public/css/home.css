@@ -28,13 +28,32 @@
   padding-top: 26px;
 }
 
-#channel-type-select {
-  -webkit-appearance: none;
+#radio-selector {
+  background-color: white;
   border: 1px solid #d0d0d0;
-  padding: 14px;
   border-radius: 6px;
-  font-size: inherit;
-  font-family: inherit;
   width: 90%;
-  text-align: center;
+  display: inline-block;
+  padding: 0px;
+  box-sizing: border-box;
+  margin: 15px 0;
+}
+
+.radio-option {
+  padding: 8px;
+  border-bottom: #d0d0d0 1px solid;
+  text-align: left;
+}
+.radio-option:last-child {
+  border-bottom: none;
+}
+
+.radio-option > .check {
+  margin-right: 8px;
+}
+.radio-option:not(.radio-option-selected) > .check {
+  visibility: hidden;
+}
+.radio-option-selected > .check {
+  visibility: visible;
 }

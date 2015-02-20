@@ -50,15 +50,30 @@
           (om/build-all list-item (:channels data) {:init-state {:comm comm}
                                                     :opts {:channel-types channel-types}}))))))
 
+(defn radio-selector [values owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:selected nil})
+    om/IRenderState
+    (render-state [_ {:keys [selected]}]
+      (apply dom/div #js {:ref "channel-type" :id "radio-selector"}
+        (map (fn [[id ch-type]]
+               (dom/div #js {:className (str "radio-option" (if (= selected (name id)) " radio-option-selected"))
+                             :value (name id)
+                             :onClick #(om/set-state! owner :selected (name id))}
+                 (dom/img #js {:src "img/check.png" :width 16 :height 16 :className "check"})
+                 (dom/span nil
+                   (:name ch-type))))
+             values)))))
+
 (defn new-channel [_ owner {:keys [channel-types]}]
   (reify
     om/IRenderState
     (render-state [_ {:keys [comm]}]
       (dom/form #js {:className "full-width-form"}
-        (dom/input #js {:ref "channel-name" :placeholder "Title" :autoFocus true})
-        (apply dom/select #js {:ref "channel-type" :id "channel-type-select" :size 4}
-          (map (fn [[id ch-type]] (dom/option #js {:value (name id)} (:name ch-type)))
-               channel-types))
+        (dom/input #js {:ref "channel-name" :type "text" :placeholder "Title" :autoFocus true})
+        (om/build radio-selector channel-types)
         (dom/button
           #js {:className "transparent-button"
                :onClick (fn [e]

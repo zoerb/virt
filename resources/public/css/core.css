@@ -79,7 +79,7 @@ header > *:first-child, header > *:last-child {
   background-color: rgba(240,240,240,0.5);
 }
 
-input {
+input[type="text"] {
   border: 1px solid #d0d0d0;
   -webkit-appearance: none;
   box-sizing: border-box;
@@ -94,7 +94,7 @@ input {
   text-align: center;
   padding: 40px 0;
 }
-.full-width-form input {
+.full-width-form input[type="text"] {
   width: 90%;
   padding: 6px;
   margin-bottom: 6px;

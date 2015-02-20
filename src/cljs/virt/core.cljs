@@ -40,7 +40,7 @@
     (render-state [_ {:keys [comm]}]
       (dom/div #js {:id "content"}
         (dom/form #js {:className "full-width-form"}
-          (dom/input #js {:ref "username-input" :placeholder "Username" :autoFocus true})
+          (dom/input #js {:ref "username-input" :type "text" :placeholder "Username" :autoFocus true})
           (dom/button
             #js {:className "transparent-button"
                  :onClick (fn [e]
