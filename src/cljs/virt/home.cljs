@@ -50,37 +50,39 @@
           (om/build-all list-item (:channels data) {:init-state {:comm comm}
                                                     :opts {:channel-types channel-types}}))))))
 
-(defn radio-selector [values owner]
+(defn radio-selector [{:keys [channel-types selected-type update-type-fn]} owner]
   (reify
-    om/IInitState
-    (init-state [_]
-      {:selected nil})
-    om/IRenderState
-    (render-state [_ {:keys [selected]}]
+    om/IRender
+    (render [_]
       (apply dom/div #js {:ref "channel-type" :id "radio-selector"}
         (map (fn [[id ch-type]]
-               (dom/div #js {:className (str "radio-option" (if (= selected (name id)) " radio-option-selected"))
+               (dom/div #js {:className (str "radio-option" (if (= selected-type (name id)) " radio-option-selected"))
                              :value (name id)
-                             :onClick #(om/set-state! owner :selected (name id))}
+                             :onClick #(update-type-fn (name id))}
                  (dom/img #js {:src "img/check.png" :width 16 :height 16 :className "check"})
                  (dom/span nil
                    (:name ch-type))))
-             values)))))
+             channel-types)))))
 
 (defn new-channel [_ owner {:keys [channel-types]}]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:selected-type nil})
     om/IRenderState
-    (render-state [_ {:keys [comm]}]
+    (render-state [_ {:keys [comm selected-type]}]
       (dom/form #js {:className "full-width-form"}
         (dom/input #js {:ref "channel-name" :type "text" :placeholder "Title" :autoFocus true})
-        (om/build radio-selector channel-types)
+        (om/build radio-selector {:channel-types channel-types
+                                  :selected-type selected-type
+                                  :update-type-fn #(om/set-state! owner :selected-type %)})
         (dom/button
           #js {:className "transparent-button"
                :onClick (fn [e]
                           (.preventDefault e)
                           (put! comm [:new-channel
                                       [(.-value (om/get-node owner "channel-name"))
-                                       (.-value (om/get-node owner "channel-type"))]]))}
+                                       selected-type]]))}
           "Create")))))
 
 (defn main [{:keys [page params data]} owner opts]
