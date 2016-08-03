@@ -106,6 +106,7 @@
 
 
 (defn -main [& args]
+  ; TODO: put db credentials in local config
   (korma.db/defdb db (db/postgres {:db "virt"
                                    :user "postgres"
                                    :password "postgres"}))
